@@ -47,8 +47,8 @@ public static class AwsClientFactory
     public static AmazonS3Client CreateS3Client(string endpoint) =>
         new(Credentials, CreateS3Config(endpoint));
 
-    public static AmazonSimpleSystemsManagementClient CreateSsmClient(string endpoint) =>
-        new(Credentials, CreateSsmConfig(endpoint));
+    public static IAmazonSimpleSystemsManagement CreateSsmClient(string endpoint) =>
+        new AmazonSimpleSystemsManagementClient(Credentials, CreateSsmConfig(endpoint));
 
     public static IAmazonSQS CreateSqsClient(string endpoint) =>
         new AmazonSQSClient(Credentials, CreateSqsConfig(endpoint));

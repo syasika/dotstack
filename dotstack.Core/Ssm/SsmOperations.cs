@@ -2,7 +2,6 @@ using System.Diagnostics;
 using Amazon.SimpleSystemsManagement;
 using Amazon.SimpleSystemsManagement.Model;
 using DotStack.Core.Aws;
-
 namespace DotStack.Core.Ssm;
 
 public record SsmParameter(
@@ -18,7 +17,7 @@ public record SsmPage(SsmParameter[] Parameters, string? NextToken);
 public static class SsmOperations
 {
     public static Task<List<SsmParameter>> ListAllParametersAsync(
-        AmazonSimpleSystemsManagementClient client,
+        IAmazonSimpleSystemsManagement client,
         CancellationToken ct = default
     ) =>
         AwsTracing.TraceAsync(
@@ -33,7 +32,8 @@ public static class SsmOperations
                 do
                 {
                     response = await client.DescribeParametersAsync(request, ct);
-                    parameters.AddRange(response.Parameters.Select(ToParameter));
+                    if (response.Parameters is { Count: > 0 })
+                        parameters.AddRange(response.Parameters.Select(ToParameter));
                     request.NextToken = response.NextToken;
                 } while (!string.IsNullOrEmpty(response.NextToken));
 
@@ -43,7 +43,7 @@ public static class SsmOperations
         );
 
     public static Task<SsmPage> ListParametersAsync(
-        AmazonSimpleSystemsManagementClient client,
+        IAmazonSimpleSystemsManagement client,
         string? nextToken = null,
         int maxResults = 20,
         CancellationToken ct = default
@@ -64,18 +64,18 @@ public static class SsmOperations
 
                 var response = await client.DescribeParametersAsync(request, ct);
 
-                activity?.SetTag("parameter.count", response.Parameters.Count);
+                activity?.SetTag("parameter.count", response.Parameters?.Count ?? 0);
                 activity?.SetTag("has.next", response.NextToken is not null);
 
                 return new SsmPage(
-                    response.Parameters.Select(ToParameter).ToArray(),
+                    response.Parameters?.Select(ToParameter).ToArray() ?? [],
                     response.NextToken
                 );
             }
         );
 
     public static Task<SsmParameter> GetParameterAsync(
-        AmazonSimpleSystemsManagementClient client,
+        IAmazonSimpleSystemsManagement client,
         string name,
         CancellationToken ct = default
     ) =>
@@ -91,21 +91,21 @@ public static class SsmOperations
                 var response = await client.GetParameterAsync(request, ct);
                 var p = response.Parameter;
 
-                activity?.SetTag("parameter.type", p.Type);
-                activity?.SetTag("parameter.version", p.Version ?? 0);
+                activity?.SetTag("parameter.type", p?.Type);
+                activity?.SetTag("parameter.version", p?.Version ?? 0);
 
                 return new SsmParameter(
-                    p.Name,
-                    p.Type,
-                    p.Value,
-                    p.LastModifiedDate ?? DateTime.MinValue,
-                    p.Version ?? 0
+                    p?.Name ?? string.Empty,
+                    p?.Type ?? string.Empty,
+                    p?.Value ?? string.Empty,
+                    p?.LastModifiedDate ?? DateTime.MinValue,
+                    p?.Version ?? 0
                 );
             }
         );
 
     public static Task PutParameterAsync(
-        AmazonSimpleSystemsManagementClient client,
+        IAmazonSimpleSystemsManagement client,
         string name,
         string value,
         string parameterType = "String",
@@ -132,7 +132,7 @@ public static class SsmOperations
         );
 
     public static Task DeleteParameterAsync(
-        AmazonSimpleSystemsManagementClient client,
+        IAmazonSimpleSystemsManagement client,
         string name,
         CancellationToken ct = default
     ) =>

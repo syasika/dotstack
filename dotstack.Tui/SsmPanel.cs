@@ -7,13 +7,13 @@ namespace DotStack.Tui;
 
 public class SsmPanel : IServicePanel
 {
-    private readonly AmazonSimpleSystemsManagementClient _client;
+    private readonly IAmazonSimpleSystemsManagement _client;
     private List<SsmParameter> _parameters = [];
     private string _parametersError = "";
     private int _cursor;
     private string _statusLine = "";
 
-    public SsmPanel(AmazonSimpleSystemsManagementClient client)
+    public SsmPanel(IAmazonSimpleSystemsManagement client)
     {
         _client = client;
     }
