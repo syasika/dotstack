@@ -118,11 +118,11 @@ public class BrowseDashboard : IDisposable
         // Service tabs
         var tabs = _mode switch
         {
-            ServiceMode.S3 => "[bold] [1][white]S3[/]  [2]SSM[/]  [3]SQS[/]  [4]SNS[/] [/]",
-            ServiceMode.Ssm => "[bold] [1]S3[/]  [2][white]SSM[/]  [3]SQS[/]  [4]SNS[/] [/]",
-            ServiceMode.Sqs => "[bold] [1]S3[/]  [2]SSM[/]  [3][white]SQS[/]  [4]SNS[/] [/]",
-            ServiceMode.Sns => "[bold] [1]S3[/]  [2]SSM[/]  [3]SQS[/]  [4][white]SNS[/] [/]",
-            _ => "[bold] [1]S3[/]  [2]SSM[/]  [3]SQS[/]  [4]SNS[/] [/]"
+            ServiceMode.S3 => "[bold] [dim][[1]][/] [white]S3[/]  [dim][[2]][/] SSM  [dim][[3]][/] SQS  [dim][[4]][/] SNS[/]",
+            ServiceMode.Ssm => "[bold] [dim][[1]][/] S3  [dim][[2]][/] [white]SSM[/]  [dim][[3]][/] SQS  [dim][[4]][/] SNS[/]",
+            ServiceMode.Sqs => "[bold] [dim][[1]][/] S3  [dim][[2]][/] SSM  [dim][[3]][/] [white]SQS[/]  [dim][[4]][/] SNS[/]",
+            ServiceMode.Sns => "[bold] [dim][[1]][/] S3  [dim][[2]][/] SSM  [dim][[3]][/] SQS  [dim][[4]][/] [white]SNS[/][/]",
+            _ => "[bold] [dim][[1]][/] [white]S3[/]  [dim][[2]][/] SSM  [dim][[3]][/] SQS  [dim][[4]][/] SNS[/]"
         };
         content.AppendLine($"  {tabs}");
         content.AppendLine();
