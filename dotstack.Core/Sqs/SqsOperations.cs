@@ -12,7 +12,7 @@ public record Message(string Id, string Body, string ReceiptHandle);
 public static class SqsOperations
 {
     public static Task<List<Queue>> ListQueuesAsync(
-        AmazonSQSClient client,
+        IAmazonSQS client,
         CancellationToken ct = default
     ) =>
         AwsTracing.TraceAsync(
@@ -27,8 +27,9 @@ public static class SqsOperations
                 do
                 {
                     response = await client.ListQueuesAsync(request, ct);
-                    foreach (var url in response.QueueUrls)
-                        queues.Add(new Queue(ExtractQueueName(url), url));
+                    if (response.QueueUrls is { Count: > 0 })
+                        foreach (var url in response.QueueUrls)
+                            queues.Add(new Queue(ExtractQueueName(url), url));
 
                     request.NextToken = response.NextToken;
                 } while (!string.IsNullOrEmpty(response.NextToken));
@@ -39,7 +40,7 @@ public static class SqsOperations
         );
 
     public static Task<Queue> CreateQueueAsync(
-        AmazonSQSClient client,
+        IAmazonSQS client,
         string name,
         CancellationToken ct = default
     ) =>
@@ -59,7 +60,7 @@ public static class SqsOperations
         );
 
     public static Task DeleteQueueAsync(
-        AmazonSQSClient client,
+        IAmazonSQS client,
         string queueUrl,
         CancellationToken ct = default
     ) =>
@@ -76,7 +77,7 @@ public static class SqsOperations
         );
 
     public static Task<string> SendMessageAsync(
-        AmazonSQSClient client,
+        IAmazonSQS client,
         string queueUrl,
         string body,
         CancellationToken ct = default
@@ -98,7 +99,7 @@ public static class SqsOperations
         );
 
     public static Task<List<Message>> ReceiveMessagesAsync(
-        AmazonSQSClient client,
+        IAmazonSQS client,
         string queueUrl,
         int maxMessages = 10,
         CancellationToken ct = default
@@ -120,9 +121,11 @@ public static class SqsOperations
 
                 var response = await client.ReceiveMessageAsync(request, ct);
 
-                var messages = response
-                    .Messages.Select(m => new Message(m.MessageId, m.Body, m.ReceiptHandle))
-                    .ToList();
+                var messages = response.Messages is { Count: > 0 }
+                    ? response
+                        .Messages.Select(m => new Message(m.MessageId, m.Body, m.ReceiptHandle))
+                        .ToList()
+                    : [];
 
                 activity?.SetTag("received.count", messages.Count);
                 return messages;
@@ -130,7 +133,7 @@ public static class SqsOperations
         );
 
     public static Task DeleteMessageAsync(
-        AmazonSQSClient client,
+        IAmazonSQS client,
         string queueUrl,
         string receiptHandle,
         CancellationToken ct = default

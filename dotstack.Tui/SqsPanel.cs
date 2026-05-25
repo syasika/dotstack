@@ -7,7 +7,7 @@ namespace DotStack.Tui;
 
 public class SqsPanel : IServicePanel
 {
-    private readonly AmazonSQSClient _client;
+    private readonly IAmazonSQS _client;
     private List<Queue> _queues = [];
     private string _queuesError = "";
     private string _currentQueueUrl = "";
@@ -17,7 +17,7 @@ public class SqsPanel : IServicePanel
     private int _cursor;
     private string _statusLine = "";
 
-    public SqsPanel(AmazonSQSClient client)
+    public SqsPanel(IAmazonSQS client)
     {
         _client = client;
     }
