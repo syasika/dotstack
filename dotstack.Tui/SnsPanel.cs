@@ -1,7 +1,7 @@
 using Amazon.SimpleNotificationService;
-using Spectre.Console;
 using DotStack.Core.Aws;
 using DotStack.Core.Sns;
+using Spectre.Console;
 
 namespace DotStack.Tui;
 
@@ -27,10 +27,12 @@ public class SnsPanel : IServicePanel
         switch (key.Key)
         {
             case ConsoleKey.UpArrow or ConsoleKey.K:
-                if (_cursor > 0) _cursor--;
+                if (_cursor > 0)
+                    _cursor--;
                 return true;
 
-            case ConsoleKey.DownArrow or ConsoleKey.J:
+            case ConsoleKey.DownArrow
+            or ConsoleKey.J:
                 _cursor++;
                 return true;
 
@@ -38,7 +40,8 @@ public class SnsPanel : IServicePanel
                 HandleRefresh(ct);
                 return true;
 
-            case ConsoleKey.Delete or ConsoleKey.Backspace:
+            case ConsoleKey.Delete
+            or ConsoleKey.Backspace:
                 HandleDelete(ct);
                 return true;
         }
@@ -46,8 +49,7 @@ public class SnsPanel : IServicePanel
         return false;
     }
 
-    public Task RefreshAsync(CancellationToken ct) =>
-        RefreshTopicsAsync(ct);
+    public Task RefreshAsync(CancellationToken ct) => RefreshTopicsAsync(ct);
 
     private void HandleRefresh(CancellationToken ct)
     {
@@ -118,8 +120,7 @@ public class SnsPanel : IServicePanel
         }
     }
 
-    private static bool Confirm(string prompt) =>
-        AnsiConsole.Confirm(prompt, false);
+    private static bool Confirm(string prompt) => AnsiConsole.Confirm(prompt, false);
 
     public void Dispose()
     {

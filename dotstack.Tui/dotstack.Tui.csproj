@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <RootNamespace>DotStack.Tui</RootNamespace>
   </PropertyGroup>
@@ -11,5 +10,4 @@
   <ItemGroup>
     <ProjectReference Include="..\dotstack.Core\dotstack.Core.csproj" />
   </ItemGroup>
-
 </Project>

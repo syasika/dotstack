@@ -1,6 +1,6 @@
-using Xunit;
-using Shouldly;
 using DotStack.Core.Configuration;
+using Shouldly;
+using Xunit;
 
 namespace DotStack.Core.Tests;
 

@@ -1,6 +1,6 @@
-using Xunit;
-using Shouldly;
 using DotStack.Core.Aws;
+using Shouldly;
+using Xunit;
 
 namespace DotStack.Core.Tests;
 

@@ -18,11 +18,13 @@ public static class AwsExceptionHelper
     {
         if (IsConnectionError(ex))
             return new InvalidOperationException(
-                "Cannot reach ministack — is the container running?");
+                "Cannot reach ministack — is the container running?"
+            );
 
         if (ex is AmazonServiceException ase && !string.IsNullOrEmpty(ase.ErrorCode))
             return new InvalidOperationException(
-                $"{service} API error: {ase.ErrorCode.ToLowerInvariant()}");
+                $"{service} API error: {ase.ErrorCode.ToLowerInvariant()}"
+            );
 
         return ex;
     }

@@ -9,7 +9,7 @@ internal class StderrActivityExporter : BaseExporter<Activity>
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false
+        WriteIndented = false,
     };
 
     public override ExportResult Export(in Batch<Activity> batch)
@@ -24,8 +24,8 @@ internal class StderrActivityExporter : BaseExporter<Activity>
                 ["status"] = activity.Status.ToString(),
                 ["traceId"] = activity.TraceId.ToString(),
                 ["spanId"] = activity.SpanId.ToString(),
-                ["parentSpanId"] = activity.ParentSpanId != default
-                    ? activity.ParentSpanId.ToString() : null
+                ["parentSpanId"] =
+                    activity.ParentSpanId != default ? activity.ParentSpanId.ToString() : null,
             };
 
             // Attributes
@@ -41,16 +41,17 @@ internal class StderrActivityExporter : BaseExporter<Activity>
             // Events (including exceptions)
             if (activity.Events.Any())
             {
-                entry["events"] = activity.Events.Select(e => new
-                {
-                    name = e.Name,
-                    timestamp = e.Timestamp.ToString("O"),
-                    attributes = e.Tags.ToDictionary(t => t.Key, t => t.Value)
-                }).ToList();
+                entry["events"] = activity
+                    .Events.Select(e => new
+                    {
+                        name = e.Name,
+                        timestamp = e.Timestamp.ToString("O"),
+                        attributes = e.Tags.ToDictionary(t => t.Key, t => t.Value),
+                    })
+                    .ToList();
             }
 
-            System.Console.Error.WriteLine(
-                JsonSerializer.Serialize(entry, JsonOpts));
+            System.Console.Error.WriteLine(JsonSerializer.Serialize(entry, JsonOpts));
         }
 
         return ExportResult.Success;

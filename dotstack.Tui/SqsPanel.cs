@@ -1,7 +1,7 @@
 using Amazon.SQS;
-using Spectre.Console;
 using DotStack.Core.Aws;
 using DotStack.Core.Sqs;
+using Spectre.Console;
 
 namespace DotStack.Tui;
 
@@ -22,9 +22,10 @@ public class SqsPanel : IServicePanel
         _client = client;
     }
 
-    public string HelpText => _showingMessages
-        ? "↑/↓ nav · del delete · esc back · r refresh"
-        : "↑/↓ nav · enter messages · del delete · r refresh";
+    public string HelpText =>
+        _showingMessages
+            ? "↑/↓ nav · del delete · esc back · r refresh"
+            : "↑/↓ nav · enter messages · del delete · r refresh";
 
     public bool IsAtRootLevel => !_showingMessages;
 
@@ -33,10 +34,12 @@ public class SqsPanel : IServicePanel
         switch (key.Key)
         {
             case ConsoleKey.UpArrow or ConsoleKey.K:
-                if (_cursor > 0) _cursor--;
+                if (_cursor > 0)
+                    _cursor--;
                 return true;
 
-            case ConsoleKey.DownArrow or ConsoleKey.J:
+            case ConsoleKey.DownArrow
+            or ConsoleKey.J:
                 _cursor++;
                 return true;
 
@@ -48,7 +51,8 @@ public class SqsPanel : IServicePanel
                 HandleRefresh(ct);
                 return true;
 
-            case ConsoleKey.Delete or ConsoleKey.Backspace:
+            case ConsoleKey.Delete
+            or ConsoleKey.Backspace:
                 HandleDelete(ct);
                 return true;
 
@@ -153,10 +157,13 @@ public class SqsPanel : IServicePanel
             for (int i = 0; i < _messages.Count; i++)
             {
                 var prefix = i == _cursor ? "▸" : " ";
-                var body = _messages[i].Body.Length > 80
-                    ? _messages[i].Body[..80] + "..."
-                    : _messages[i].Body;
-                content.AppendLine($"  {prefix} {body.EscapeMarkup()}  [grey]({_messages[i].Id})[/]");
+                var body =
+                    _messages[i].Body.Length > 80
+                        ? _messages[i].Body[..80] + "..."
+                        : _messages[i].Body;
+                content.AppendLine(
+                    $"  {prefix} {body.EscapeMarkup()}  [grey]({_messages[i].Id})[/]"
+                );
             }
     }
 
@@ -220,8 +227,7 @@ public class SqsPanel : IServicePanel
         }
     }
 
-    private static bool Confirm(string prompt) =>
-        AnsiConsole.Confirm(prompt, false);
+    private static bool Confirm(string prompt) => AnsiConsole.Confirm(prompt, false);
 
     public void Dispose()
     {
