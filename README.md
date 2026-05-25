@@ -154,6 +154,8 @@ Launch with `dotstack browse`. An interactive live dashboard showing container s
   ↑/↓ nav · enter browse · del delete · s start · q quit
 ```
 
+The dashboard (`BrowseDashboard`) is a thin orchestrator. Each AWS service has its own panel (`IServicePanel`) managing its state, render, keyboard handling, and sub-navigation independently.
+
 ### Tabs
 
 Press number keys to switch service:
@@ -178,8 +180,6 @@ Press number keys to switch service:
 |---|
 | `↑`/`↓` or `k`/`j` navigate, `enter` show parameter value in status bar, `del`/`backspace` delete parameter (with confirmation), `r` refresh |
 
-Pagination shows `[more →]` when more than 20 parameters exist.
-
 ### SQS View
 
 | State | Controls |
@@ -197,9 +197,9 @@ Pagination shows `[more →]` when more than 20 parameters exist.
 
 | Key | Action |
 |---|---|
-| `q` | Quit dashboard |
-| `s` | Start container (if stopped) |
-| `x` | Stop container (if running) |
+| `1`‑`4` | Switch service panel |
+| `q` / `esc` | Quit dashboard |
+| `r` | Refresh current panel |
 
 ### Destructive Actions
 
@@ -297,11 +297,34 @@ Projects:
 
 | Project | Role |
 |---|---|
-| `dotstack.Cli` | CLI entry point (`Program.cs`), Spectre.Console.Cli command tree |
-| `dotstack.Tui` | Live dashboard (`BrowseDashboard.cs`), async refresh loop, keyboard navigation |
-| `dotstack.Core` | `Config` persistence, `AwsClientFactory`, typed operation wrappers per service |
+| `dotstack.Cli` | CLI entry point (`Program.cs`), Spectre.Console.Cli command tree, OpenTelemetry tracer setup |
+| `dotstack.Tui` | Live dashboard orchestrated by `BrowseDashboard`, per-service panels (`S3Panel`, `SsmPanel`, `SqsPanel`, `SnsPanel`) implementing `IServicePanel` |
+| `dotstack.Core` | `Config` persistence, `AwsClientFactory`, typed operation wrappers per service, `AwsTracing` interceptor for consistent trace + error handling |
 
-AWS clients use dummy credentials (`miniaws`/`miniaws`) and point at the local ministack endpoint. All AWS errors are translated to friendly messages (connection refused → "is the container running?").
+AWS clients use dummy credentials (`miniaws`/`miniaws`) and point at the local ministack endpoint. AWS errors are translated to friendly messages (connection refused → "is the container running?").
+
+### Tracing interceptor
+
+Every AWS operation (S3.ListBuckets, SQS.SendMessage, etc.) is wrapped by `AwsTracing.TraceAsync` in `dotstack.Core/Aws/AwsTracing.cs`. This single module handles:
+- Activity span lifecycle (start/stop via `ActivitySources.DotStack`)
+- Service-scoped tags (`service`, bucket, queue URL, etc.)
+- Error status recording + exception capture
+- Translation to user-friendly errors via `AwsExceptionHelper`
+
+Operations files (`S3Operations`, `SsmOperations`, etc.) are pure AWS method calls — no try-catch or tracing logic inlined.
+
+### Dashboard panels
+
+The TUI dashboard (`BrowseDashboard`) is a thin orchestrator. Each AWS service has its own panel class implementing `IServicePanel`:
+
+| Panel | Path |
+|---|---|
+| `S3Panel` | `dotstack.Tui/S3Panel.cs` |
+| `SsmPanel` | `dotstack.Tui/SsmPanel.cs` |
+| `SqsPanel` | `dotstack.Tui/SqsPanel.cs` |
+| `SnsPanel` | `dotstack.Tui/SnsPanel.cs` |
+
+The dashboard routes keyboard input and switches panels on tab press. Each panel manages its own state, cursor, render, refresh, and sub-navigation (bucket → objects, queue → messages). Adding a new service requires one new panel class + one registration in `BrowseDashboard`.
 
 ## License
 

@@ -29,8 +29,16 @@ An interactive terminal dashboard that displays container status and lets the us
 _Avoid_: Dashboard, explorer, TUI (when referring specifically to the browse command)
 
 **Trace**:
-A structured record of an AWS API operation (e.g. S3.ListBuckets, SQS.SendMessage) captured as an OpenTelemetry span. Every public method in `*Operations.cs` produces a trace with timing, attributes, and error details.
+A structured record of an AWS API operation (e.g. S3.ListBuckets, SQS.SendMessage) captured as an OpenTelemetry span. Every public method in `*Operations.cs` produces a trace — wrapped by the `AwsTracing` interceptor — with timing, attributes, and error details.
 _Avoid_: Log, audit, diagnostic
+
+**AwsTracing**:
+A static helper in `DotStack.Core.Aws` that wraps any AWS operation delegate in an Activity span lifecycle and exception mapping. Used by every method in `S3Operations`, `SsmOperations`, `SqsOperations`, and `SnsOperations`. Eliminates ~250 lines of per-method try-catch boilerplate.
+_Avoid_: Decorator, middleware, interceptor (when referring to the AwsTracing module specifically)
+
+**Panel**:
+A class implementing `IServicePanel` that manages one service's state, render, keyboard input, and sub-navigation in the browse dashboard. One panel per service: `S3Panel`, `SsmPanel`, `SqsPanel`, `SnsPanel`. The `BrowseDashboard` holds a dictionary of panels and delegates to the active one.
+_Avoid_: View, widget, component (when referring to a service panel specifically)
 
 **ActivitySource**:
 The `DotStack.Core` ActivitySource in `DotStack.Core.Telemetry` — the single source of OpenTelemetry spans in the project. All operations export through this source.

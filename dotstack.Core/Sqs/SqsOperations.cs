@@ -2,7 +2,6 @@ using System.Diagnostics;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using DotStack.Core.Aws;
-using DotStack.Core.Telemetry;
 
 namespace DotStack.Core.Sqs;
 
@@ -12,12 +11,9 @@ public record Message(string Id, string Body, string ReceiptHandle);
 
 public static class SqsOperations
 {
-    public static async Task<List<Queue>> ListQueuesAsync(
-        AmazonSQSClient client, CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("SQS.ListQueues");
-        activity?.SetTag("service", "sqs");
-        try
+    public static Task<List<Queue>> ListQueuesAsync(
+        AmazonSQSClient client, CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("SQS.ListQueues", "sqs", async activity =>
         {
             var queues = new List<Queue>();
             var request = new ListQueuesRequest();
@@ -35,65 +31,39 @@ public static class SqsOperations
 
             activity?.SetTag("queue.count", queues.Count);
             return queues;
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "SQS");
-        }
-    }
+        });
 
-    public static async Task<Queue> CreateQueueAsync(
-        AmazonSQSClient client, string name, CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("SQS.CreateQueue");
-        activity?.SetTag("service", "sqs");
-        activity?.SetTag("queue.name", name);
-        try
+    public static Task<Queue> CreateQueueAsync(
+        AmazonSQSClient client, string name, CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("SQS.CreateQueue", "sqs", async activity =>
         {
+            activity?.SetTag("queue.name", name);
+
             var request = new CreateQueueRequest { QueueName = name };
             var response = await client.CreateQueueAsync(request, ct);
+
             activity?.SetTag("queue.url", response.QueueUrl);
             return new Queue(name, response.QueueUrl);
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "SQS");
-        }
-    }
+        });
 
-    public static async Task DeleteQueueAsync(
-        AmazonSQSClient client, string queueUrl, CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("SQS.DeleteQueue");
-        activity?.SetTag("service", "sqs");
-        activity?.SetTag("queue.url", queueUrl);
-        try
+    public static Task DeleteQueueAsync(
+        AmazonSQSClient client, string queueUrl, CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("SQS.DeleteQueue", "sqs", async activity =>
         {
+            activity?.SetTag("queue.url", queueUrl);
+
             var request = new DeleteQueueRequest { QueueUrl = queueUrl };
             await client.DeleteQueueAsync(request, ct);
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "SQS");
-        }
-    }
+        });
 
-    public static async Task<string> SendMessageAsync(
+    public static Task<string> SendMessageAsync(
         AmazonSQSClient client, string queueUrl, string body,
-        CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("SQS.SendMessage");
-        activity?.SetTag("service", "sqs");
-        activity?.SetTag("queue.url", queueUrl);
-        activity?.SetTag("message.size", body.Length);
-        try
+        CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("SQS.SendMessage", "sqs", async activity =>
         {
+            activity?.SetTag("queue.url", queueUrl);
+            activity?.SetTag("message.size", body.Length);
+
             var request = new SendMessageRequest
             {
                 QueueUrl = queueUrl,
@@ -103,25 +73,16 @@ public static class SqsOperations
             var response = await client.SendMessageAsync(request, ct);
             activity?.SetTag("message.id", response.MessageId);
             return response.MessageId;
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "SQS");
-        }
-    }
+        });
 
-    public static async Task<List<Message>> ReceiveMessagesAsync(
+    public static Task<List<Message>> ReceiveMessagesAsync(
         AmazonSQSClient client, string queueUrl,
-        int maxMessages = 10, CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("SQS.ReceiveMessages");
-        activity?.SetTag("service", "sqs");
-        activity?.SetTag("queue.url", queueUrl);
-        activity?.SetTag("max.messages", maxMessages);
-        try
+        int maxMessages = 10, CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("SQS.ReceiveMessages", "sqs", async activity =>
         {
+            activity?.SetTag("queue.url", queueUrl);
+            activity?.SetTag("max.messages", maxMessages);
+
             var request = new ReceiveMessageRequest
             {
                 QueueUrl = queueUrl,
@@ -137,24 +98,15 @@ public static class SqsOperations
 
             activity?.SetTag("received.count", messages.Count);
             return messages;
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "SQS");
-        }
-    }
+        });
 
-    public static async Task DeleteMessageAsync(
+    public static Task DeleteMessageAsync(
         AmazonSQSClient client, string queueUrl, string receiptHandle,
-        CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("SQS.DeleteMessage");
-        activity?.SetTag("service", "sqs");
-        activity?.SetTag("queue.url", queueUrl);
-        try
+        CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("SQS.DeleteMessage", "sqs", async activity =>
         {
+            activity?.SetTag("queue.url", queueUrl);
+
             var request = new DeleteMessageRequest
             {
                 QueueUrl = queueUrl,
@@ -162,14 +114,7 @@ public static class SqsOperations
             };
 
             await client.DeleteMessageAsync(request, ct);
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "SQS");
-        }
-    }
+        });
 
     public static string ExtractQueueName(string queueUrl)
     {

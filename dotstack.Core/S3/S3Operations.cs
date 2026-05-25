@@ -2,7 +2,6 @@ using System.Diagnostics;
 using Amazon.S3;
 using Amazon.S3.Model;
 using DotStack.Core.Aws;
-using DotStack.Core.Telemetry;
 
 namespace DotStack.Core.S3;
 
@@ -10,35 +9,23 @@ public record S3Object(string Key, long Size);
 
 public static class S3Operations
 {
-    public static async Task<List<string>> ListBucketsAsync(
-        AmazonS3Client client, CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("S3.ListBuckets");
-        activity?.SetTag("service", "s3");
-        try
+    public static Task<List<string>> ListBucketsAsync(
+        AmazonS3Client client, CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("S3.ListBuckets", "s3", async activity =>
         {
             var resp = await client.ListBucketsAsync(ct);
             activity?.SetTag("bucket.count", resp.Buckets.Count);
             return resp.Buckets.Select(b => b.BucketName).ToList();
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "S3");
-        }
-    }
+        });
 
-    public static async Task<List<S3Object>> ListObjectsAsync(
+    public static Task<List<S3Object>> ListObjectsAsync(
         AmazonS3Client client, string bucket, string prefix = "",
-        CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("S3.ListObjects");
-        activity?.SetTag("service", "s3");
-        activity?.SetTag("bucket", bucket);
-        activity?.SetTag("prefix", prefix);
-        try
+        CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("S3.ListObjects", "s3", async activity =>
         {
+            activity?.SetTag("bucket", bucket);
+            activity?.SetTag("prefix", prefix);
+
             var request = new ListObjectsV2Request
             {
                 BucketName = bucket,
@@ -56,59 +43,30 @@ public static class S3Operations
 
             activity?.SetTag("object.count", items.Count);
             return items;
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "S3");
-        }
-    }
+        });
 
-    public static async Task CreateBucketAsync(
-        AmazonS3Client client, string name, CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("S3.CreateBucket");
-        activity?.SetTag("service", "s3");
-        activity?.SetTag("bucket", name);
-        try
+    public static Task CreateBucketAsync(
+        AmazonS3Client client, string name, CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("S3.CreateBucket", "s3", async activity =>
         {
+            activity?.SetTag("bucket", name);
             await client.PutBucketAsync(name, ct);
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "S3");
-        }
-    }
+        });
 
-    public static async Task DeleteBucketAsync(
-        AmazonS3Client client, string name, CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("S3.DeleteBucket");
-        activity?.SetTag("service", "s3");
-        activity?.SetTag("bucket", name);
-        try
+    public static Task DeleteBucketAsync(
+        AmazonS3Client client, string name, CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("S3.DeleteBucket", "s3", async activity =>
         {
+            activity?.SetTag("bucket", name);
             await client.DeleteBucketAsync(name, ct);
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "S3");
-        }
-    }
+        });
 
-    public static async Task EmptyBucketAsync(
-        AmazonS3Client client, string bucket, CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("S3.EmptyBucket");
-        activity?.SetTag("service", "s3");
-        activity?.SetTag("bucket", bucket);
-        try
+    public static Task EmptyBucketAsync(
+        AmazonS3Client client, string bucket, CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("S3.EmptyBucket", "s3", async activity =>
         {
+            activity?.SetTag("bucket", bucket);
+
             var listRequest = new ListObjectsV2Request { BucketName = bucket };
             ListObjectsV2Response listResp;
             var totalDeleted = 0;
@@ -140,26 +98,17 @@ public static class S3Operations
             while (listResp.IsTruncated is true);
 
             activity?.SetTag("deleted.count", totalDeleted);
-        }
-        catch (Exception ex) when (ex is not InvalidOperationException)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "S3");
-        }
-    }
+        });
 
-    public static async Task UploadFileAsync(
+    public static Task UploadFileAsync(
         AmazonS3Client client, string bucket, string key,
-        string localPath, CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("S3.UploadFile");
-        activity?.SetTag("service", "s3");
-        activity?.SetTag("bucket", bucket);
-        activity?.SetTag("key", key);
-        activity?.SetTag("local.path", localPath);
-        try
+        string localPath, CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("S3.UploadFile", "s3", async activity =>
         {
+            activity?.SetTag("bucket", bucket);
+            activity?.SetTag("key", key);
+            activity?.SetTag("local.path", localPath);
+
             var fileInfo = new FileInfo(localPath);
             activity?.SetTag("file.size", fileInfo.Exists ? fileInfo.Length : -1);
 
@@ -174,26 +123,17 @@ public static class S3Operations
                 };
                 await client.PutObjectAsync(request, ct);
             }
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "S3");
-        }
-    }
+        });
 
-    public static async Task<long> DownloadFileAsync(
+    public static Task<long> DownloadFileAsync(
         AmazonS3Client client, string bucket, string key,
-        string localPath, CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("S3.DownloadFile");
-        activity?.SetTag("service", "s3");
-        activity?.SetTag("bucket", bucket);
-        activity?.SetTag("key", key);
-        activity?.SetTag("local.path", localPath);
-        try
+        string localPath, CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("S3.DownloadFile", "s3", async activity =>
         {
+            activity?.SetTag("bucket", bucket);
+            activity?.SetTag("key", key);
+            activity?.SetTag("local.path", localPath);
+
             var resp = await client.GetObjectAsync(bucket, key, ct);
             await using (resp.ResponseStream)
             {
@@ -213,32 +153,15 @@ public static class S3Operations
                     return written;
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "S3");
-        }
-    }
+        });
 
-    public static async Task DeleteObjectAsync(
+    public static Task DeleteObjectAsync(
         AmazonS3Client client, string bucket, string key,
-        CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("S3.DeleteObject");
-        activity?.SetTag("service", "s3");
-        activity?.SetTag("bucket", bucket);
-        activity?.SetTag("key", key);
-        try
+        CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("S3.DeleteObject", "s3", async activity =>
         {
+            activity?.SetTag("bucket", bucket);
+            activity?.SetTag("key", key);
             await client.DeleteObjectAsync(bucket, key, ct);
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "S3");
-        }
-    }
+        });
 }

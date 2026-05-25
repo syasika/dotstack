@@ -2,7 +2,6 @@ using System.Diagnostics;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using DotStack.Core.Aws;
-using DotStack.Core.Telemetry;
 
 namespace DotStack.Core.Sns;
 
@@ -10,12 +9,9 @@ public record Topic(string Name, string Arn);
 
 public static class SnsOperations
 {
-    public static async Task<List<Topic>> ListTopicsAsync(
-        AmazonSimpleNotificationServiceClient client, CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("SNS.ListTopics");
-        activity?.SetTag("service", "sns");
-        try
+    public static Task<List<Topic>> ListTopicsAsync(
+        AmazonSimpleNotificationServiceClient client, CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("SNS.ListTopics", "sns", async activity =>
         {
             var topics = new List<Topic>();
             var request = new ListTopicsRequest();
@@ -33,68 +29,42 @@ public static class SnsOperations
 
             activity?.SetTag("topic.count", topics.Count);
             return topics;
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "SNS");
-        }
-    }
+        });
 
-    public static async Task<Topic> CreateTopicAsync(
+    public static Task<Topic> CreateTopicAsync(
         AmazonSimpleNotificationServiceClient client, string name,
-        CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("SNS.CreateTopic");
-        activity?.SetTag("service", "sns");
-        activity?.SetTag("topic.name", name);
-        try
+        CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("SNS.CreateTopic", "sns", async activity =>
         {
+            activity?.SetTag("topic.name", name);
+
             var request = new CreateTopicRequest { Name = name };
             var response = await client.CreateTopicAsync(request, ct);
+
             activity?.SetTag("topic.arn", response.TopicArn);
             return new Topic(name, response.TopicArn);
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "SNS");
-        }
-    }
+        });
 
-    public static async Task DeleteTopicAsync(
+    public static Task DeleteTopicAsync(
         AmazonSimpleNotificationServiceClient client, string topicArn,
-        CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("SNS.DeleteTopic");
-        activity?.SetTag("service", "sns");
-        activity?.SetTag("topic.arn", topicArn);
-        try
+        CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("SNS.DeleteTopic", "sns", async activity =>
         {
+            activity?.SetTag("topic.arn", topicArn);
+
             var request = new DeleteTopicRequest { TopicArn = topicArn };
             await client.DeleteTopicAsync(request, ct);
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "SNS");
-        }
-    }
+        });
 
-    public static async Task<string> PublishMessageAsync(
+    public static Task<string> PublishMessageAsync(
         AmazonSimpleNotificationServiceClient client,
         string topicArn, string message,
-        CancellationToken ct = default)
-    {
-        using var activity = ActivitySources.DotStack.StartActivity("SNS.PublishMessage");
-        activity?.SetTag("service", "sns");
-        activity?.SetTag("topic.arn", topicArn);
-        activity?.SetTag("message.size", message.Length);
-        try
+        CancellationToken ct = default) =>
+        AwsTracing.TraceAsync("SNS.PublishMessage", "sns", async activity =>
         {
+            activity?.SetTag("topic.arn", topicArn);
+            activity?.SetTag("message.size", message.Length);
+
             var request = new PublishRequest
             {
                 TopicArn = topicArn,
@@ -104,14 +74,7 @@ public static class SnsOperations
             var response = await client.PublishAsync(request, ct);
             activity?.SetTag("message.id", response.MessageId);
             return response.MessageId;
-        }
-        catch (Exception ex)
-        {
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            activity?.AddException(ex);
-            throw AwsExceptionHelper.ToFriendlyError(ex, "SNS");
-        }
-    }
+        });
 
     public static string ExtractTopicName(string topicArn)
     {
