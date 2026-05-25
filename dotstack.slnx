@@ -1,0 +1,13 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+  </Configurations>
+  <Project Path="dotstack.Cli/dotstack.Cli.csproj" />
+  <Project Path="dotstack.Core/dotstack.Core.csproj" />
+  <Project Path="dotstack.Tui/dotstack.Tui.csproj" />
+  <Folder Name="/test/">
+    <Project Path="test/dotstack.Core.Tests/dotstack.Core.Tests.csproj" />
+    <Project Path="test/dotstack.Cli.Tests/dotstack.Cli.Tests.csproj" />
+    <Project Path="test/dotstack.Tui.Tests/dotstack.Tui.Tests.csproj" />
+  </Folder>
+</Solution>

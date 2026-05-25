@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>DotStack.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="AWSSDK.SimpleSystemsManagement" />
+    <PackageReference Include="AWSSDK.SQS" />
+    <PackageReference Include="AWSSDK.SimpleNotificationService" />
+    <PackageReference Include="Docker.DotNet" />
+  </ItemGroup>
+
+</Project>

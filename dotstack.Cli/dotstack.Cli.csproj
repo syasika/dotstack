@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>DotStack.Cli</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console.Cli" />
+    <PackageReference Include="Spectre.Console" />
+    <PackageReference Include="AWSSDK.Core" />
+    <PackageReference Include="OpenTelemetry" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\dotstack.Core\dotstack.Core.csproj" />
+    <ProjectReference Include="..\dotstack.Tui\dotstack.Tui.csproj" />
+  </ItemGroup>
+
+</Project>

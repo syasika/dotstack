@@ -1,0 +1,27 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- AWS SDK -->
+    <PackageVersion Include="AWSSDK.Core" Version="4.0.7.3" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.23.3" />
+    <PackageVersion Include="AWSSDK.SimpleSystemsManagement" Version="4.0.7.14" />
+    <PackageVersion Include="AWSSDK.SQS" Version="4.0.2.28" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.2.34" />
+    <!-- Docker -->
+    <PackageVersion Include="Docker.DotNet" Version="3.125.15" />
+    <!-- Spectre.Console -->
+    <PackageVersion Include="Spectre.Console" Version="0.55.2" />
+    <PackageVersion Include="Spectre.Console.Cli" Version="0.55.0" />
+    <!-- OpenTelemetry -->
+    <PackageVersion Include="OpenTelemetry" Version="1.15.3" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
+    <!-- Testing -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="Shouldly" Version="4.3.0" />
+    <PackageVersion Include="FakeItEasy" Version="9.0.1" />
+  </ItemGroup>
+</Project>
