@@ -7,13 +7,13 @@ namespace DotStack.Tui;
 
 public class SnsPanel : IServicePanel
 {
-    private readonly AmazonSimpleNotificationServiceClient _client;
+    private readonly IAmazonSimpleNotificationService _client;
     private List<Topic> _topics = [];
     private string _topicsError = "";
     private int _cursor;
     private string _statusLine = "";
 
-    public SnsPanel(AmazonSimpleNotificationServiceClient client)
+    public SnsPanel(IAmazonSimpleNotificationService client)
     {
         _client = client;
     }

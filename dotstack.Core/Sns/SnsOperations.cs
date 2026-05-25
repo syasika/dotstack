@@ -10,7 +10,7 @@ public record Topic(string Name, string Arn);
 public static class SnsOperations
 {
     public static Task<List<Topic>> ListTopicsAsync(
-        AmazonSimpleNotificationServiceClient client,
+        IAmazonSimpleNotificationService client,
         CancellationToken ct = default
     ) =>
         AwsTracing.TraceAsync(
@@ -25,8 +25,9 @@ public static class SnsOperations
                 do
                 {
                     response = await client.ListTopicsAsync(request, ct);
-                    foreach (var t in response.Topics)
-                        topics.Add(new Topic(ExtractTopicName(t.TopicArn), t.TopicArn));
+                    if (response.Topics is { Count: > 0 })
+                        foreach (var t in response.Topics)
+                            topics.Add(new Topic(ExtractTopicName(t.TopicArn), t.TopicArn));
 
                     request.NextToken = response.NextToken;
                 } while (!string.IsNullOrEmpty(response.NextToken));
@@ -37,7 +38,7 @@ public static class SnsOperations
         );
 
     public static Task<Topic> CreateTopicAsync(
-        AmazonSimpleNotificationServiceClient client,
+        IAmazonSimpleNotificationService client,
         string name,
         CancellationToken ct = default
     ) =>
@@ -57,7 +58,7 @@ public static class SnsOperations
         );
 
     public static Task DeleteTopicAsync(
-        AmazonSimpleNotificationServiceClient client,
+        IAmazonSimpleNotificationService client,
         string topicArn,
         CancellationToken ct = default
     ) =>
@@ -74,7 +75,7 @@ public static class SnsOperations
         );
 
     public static Task<string> PublishMessageAsync(
-        AmazonSimpleNotificationServiceClient client,
+        IAmazonSimpleNotificationService client,
         string topicArn,
         string message,
         CancellationToken ct = default

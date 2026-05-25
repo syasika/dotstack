@@ -53,6 +53,6 @@ public static class AwsClientFactory
     public static AmazonSQSClient CreateSqsClient(string endpoint) =>
         new(Credentials, CreateSqsConfig(endpoint));
 
-    public static AmazonSimpleNotificationServiceClient CreateSnsClient(string endpoint) =>
-        new(Credentials, CreateSnsConfig(endpoint));
+    public static IAmazonSimpleNotificationService CreateSnsClient(string endpoint) =>
+        new AmazonSimpleNotificationServiceClient(Credentials, CreateSnsConfig(endpoint));
 }
