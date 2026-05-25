@@ -13,7 +13,8 @@ The project now uses the **OpenTelemetry .NET SDK** to produce distributed trace
 ## What was added
 
 - **`dotstack.Core/Telemetry/ActivitySources.cs`** — single `ActivitySource("DotStack.Core")` that all operations use
-- **Every public method** in `S3Operations`, `SsmOperations`, `SqsOperations`, `SnsOperations` — wrapped in an `Activity` span with service-specific attributes (bucket name, key, queue URL, topic ARN, counts, etc.)
+- **`dotstack.Core/Aws/AwsTracing.cs`** — shared `TraceAsync<T>` / `TraceAsync` interceptor that wraps any delegate in an Activity span + exception mapping, used by every operation method. Replaced ~250 lines of per-method try-catch-activity boilerplate across the four Operations files.
+- **Every public method** in `S3Operations`, `SsmOperations`, `SqsOperations`, `SnsOperations` — traced through the `AwsTracing` interceptor with service-specific attributes (bucket name, key, queue URL, topic ARN, counts, etc.)
 - **`StderrActivityExporter`** — custom exporter in `dotstack.Cli` that writes each span as a JSONL line to stderr
 - **`TracerProvider`** initialized in `Program.cs` with stderr exporter always-on and OTLP exporter when the env var is set
 

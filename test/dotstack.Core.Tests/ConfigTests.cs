@@ -9,8 +9,25 @@ public class ConfigTests
     [Fact]
     public void Load_returns_null_when_no_config()
     {
-        var cfg = Config.Load();
-        cfg.ShouldBeNull();
+        var dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(dir);
+        var originalHome = Environment.GetEnvironmentVariable("HOME");
+        var originalUserProfile = Environment.GetEnvironmentVariable("USERPROFILE");
+        try
+        {
+            Environment.SetEnvironmentVariable("HOME", dir);
+            Environment.SetEnvironmentVariable("USERPROFILE", dir);
+
+            var cfg = Config.Load();
+            cfg.ShouldBeNull();
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("HOME", originalHome);
+            Environment.SetEnvironmentVariable("USERPROFILE", originalUserProfile);
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, true);
+        }
     }
 
     [Fact]
