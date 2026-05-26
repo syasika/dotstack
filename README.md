@@ -134,6 +134,7 @@ Manage the ministack Docker container.
 | Flag | Default | Description |
 |---|---|---|
 | `-e, --endpoint-url` | `http://localhost:4566` | Ministack API endpoint |
+| `-v, --verbose` | `false` | Print human-readable trace summaries for each AWS operation |
 
 ## Browse TUI
 
@@ -220,55 +221,30 @@ Config is stored as JSON at `~/.dotstack/config.json`:
 
 Created by `init`, removed by `container remove`. Auto-loaded by all commands.
 
-## Telemetry / OpenTelemetry Tracing
+## Verbose Mode
 
-Every AWS API operation (S3 bucket list, SQS send, SSM get, etc.) produces an **OpenTelemetry trace** — a structured span with timing, parameters, and error details. No configuration needed.
-
-### Always-on: stderr JSONL
-
-All traces are written as JSON lines to stderr. Stdout stays clean for command output.
+Pass `-v` or `--verbose` to print a human-readable trace line for every AWS operation:
 
 ```bash
-# Capture traces to a file
-dotstack s3 ls 2>traces.jsonl
-
-# Live view with jq
-dotstack s3 cp ./photo.jpg s3://my-bucket/ 2>&1 | jq .
+dotstack s3 ls -v
+[S3.ListBuckets] ✓  42ms  OK
 ```
 
-Example trace output on error:
-
-```json
-{
-  "timestamp": "2026-05-25T20:38:58.4097962Z",
-  "name": "S3.ListObjects",
-  "durationMs": 178.5,
-  "status": "Error",
-  "traceId": "96708b1626954226...",
-  "spanId": "a3c5f2763a24d320",
-  "attributes": {"bucket": "nonexistent-bucket"},
-  "events": [{
-    "name": "exception",
-    "attributes": {
-      "exception.type": "Amazon.S3.Model.NoSuchBucketException",
-      "exception.message": "The specified bucket does not exist",
-      "exception.stacktrace": "..."
-    }
-  }]
-}
-```
-
-### Optional: Aspire Dashboard
-
-Set `OTEL_EXPORTER_OTLP_ENDPOINT` to send traces to an OpenTelemetry Collector or Aspire Dashboard:
+On error the trace shows the failure:
 
 ```bash
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 dotstack s3 ls
+dotstack s3 rb nonexistent-bucket -v
+[S3.DeleteBucket] ✗  178ms  ERROR The specified bucket does not exist
 ```
 
-The Aspire Dashboard shows the full trace waterfall — which operations ran, how long they took, and where errors occurred.
+Verbose output goes to stderr, so stdout stays clean for scripting:
 
-### Operations traced
+```bash
+dotstack s3 ls -v 2>&1 | grep "✓"       # filter successful operations only
+dotstack s3 cp ./f s3://b/ -v 2>traces   # capture traces to file
+```
+
+Operations traced:
 
 | Service | Operations |
 |---------|------------|
@@ -277,9 +253,25 @@ The Aspire Dashboard shows the full trace waterfall — which operations ran, ho
 | SQS | ListQueues, CreateQueue, DeleteQueue, SendMessage, ReceiveMessages, DeleteMessage |
 | SNS | ListTopics, CreateTopic, DeleteTopic, PublishMessage |
 
-Error spans include the original exception type, message, and full stack trace — visible in the trace dashboard or the stderr JSONL output. The user-facing CLI output still shows the same friendly error messages (e.g. "S3 API error: nosuchbucket").
+### OTLP Export (Aspire Dashboard)
+
+Set `OTEL_EXPORTER_OTLP_ENDPOINT` to send full structured traces to an OpenTelemetry Collector or Aspire Dashboard:
+
+```bash
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 dotstack s3 ls
+```
+
+The Aspire Dashboard shows the full trace waterfall — timing, attributes, and error details with exception stack traces.
+
+When OTLP is configured, the verbose flag still works alongside it.
 
 See [docs/adr/0002-opentelemetry-tracing.md](docs/adr/0002-opentelemetry-tracing.md) for the design decisions.
+
+## Telemetry / OpenTelemetry Tracing
+
+Every AWS API operation produces an **OpenTelemetry trace** — a structured span with timing, parameters, and error details. The `AwsTracing` interceptor in `dotstack.Core` wraps all operations.
+
+Error spans include the original exception type, message, and full stack trace — visible in the OTLP dashboard or via `-v` stderr output. User-facing CLI output still shows friendly error messages (e.g. "S3 API error: nosuchbucket").
 
 ## Architecture
 

@@ -6,4 +6,7 @@ public class EndpointSettings : CommandSettings
 {
     [CommandOption("-e|--endpoint-url")]
     public string EndpointUrl { get; set; } = "http://localhost:4566";
+
+    [CommandOption("-v|--verbose")]
+    public bool Verbose { get; set; }
 }

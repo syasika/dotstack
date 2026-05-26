@@ -12,7 +12,7 @@ var tracerProviderBuilder = Sdk.CreateTracerProviderBuilder()
     .AddSource(ActivitySources.DotStack.Name)
     .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("dotstack"));
 
-tracerProviderBuilder.AddProcessor(new SimpleActivityExportProcessor(new StderrActivityExporter()));
+tracerProviderBuilder.AddProcessor(new SimpleActivityExportProcessor(new VerboseActivityExporter()));
 
 if (!string.IsNullOrEmpty(otelEndpoint))
 {

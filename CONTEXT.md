@@ -44,12 +44,12 @@ _Avoid_: View, widget, component (when referring to a service panel specifically
 The `DotStack.Core` ActivitySource in `DotStack.Core.Telemetry` — the single source of OpenTelemetry spans in the project. All operations export through this source.
 _Avoid_: Tracer, telemetry client
 
-**Stderr Export**:
-The fallback trace output. Every span is written as a JSONL line to stderr via `StderrActivityExporter`. Always-on, no configuration needed. View with `2>traces.jsonl`.
-_Avoid_: Console export, stdout logging
+**Verbose Export**:
+Human-readable trace summaries written to stderr when `-v`/`--verbose` is set. Each line shows service, operation, status glyph (✓/✗), duration, and error text. Implemented by `VerboseActivityExporter` — a no-op when `VerboseConfig.Enabled` is false.
+_Avoid_: Console export, JSONL, stderr logging
 
 **OTLP Export**:
-Sends traces to an OpenTelemetry collector or Aspire Dashboard via the OpenTelemetry Protocol. Enabled by setting `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable (e.g. `http://localhost:4317`).
+Sends traces to an OpenTelemetry collector or Aspire Dashboard via the OpenTelemetry Protocol. Enabled by setting `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable (e.g. `http://localhost:4317`). When set, takes priority over verbose stderr output. Both can be active simultaneously.
 _Avoid_: Aspire integration, telemetry upload
 
 ## Example Dialogue
