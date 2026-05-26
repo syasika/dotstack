@@ -243,6 +243,92 @@ public class S3OperationsTests
     }
 
     [Fact]
+    public async Task DownloadFileAsync_dot_localpath_uses_key_filename()
+    {
+        var fake = A.Fake<IAmazonS3>();
+        var content = "hello from dot";
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempDir);
+        var origDir = Directory.GetCurrentDirectory();
+
+        var getResp = new GetObjectResponse
+        {
+            BucketName = "bucket",
+            Key = "some/file.txt",
+            ResponseStream = new MemoryStream(Encoding.UTF8.GetBytes(content)),
+        };
+
+        A.CallTo(() => fake.GetObjectAsync("bucket", "some/file.txt", A<CancellationToken>._))
+            .Returns(getResp);
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempDir);
+
+            var written = await S3Operations.DownloadFileAsync(
+                fake,
+                "bucket",
+                "some/file.txt",
+                "."
+            );
+
+            written.ShouldBe(content.Length);
+            var expectedFile = Path.Combine(tempDir, "file.txt");
+            File.Exists(expectedFile).ShouldBeTrue();
+            (await File.ReadAllTextAsync(expectedFile)).ShouldBe(content);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(origDir);
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public async Task DownloadFileAsync_dot_slash_localpath_uses_key_filename()
+    {
+        var fake = A.Fake<IAmazonS3>();
+        var content = "from dot slash";
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempDir);
+        var origDir = Directory.GetCurrentDirectory();
+
+        var getResp = new GetObjectResponse
+        {
+            BucketName = "bucket",
+            Key = "subdir/data.csv",
+            ResponseStream = new MemoryStream(Encoding.UTF8.GetBytes(content)),
+        };
+
+        A.CallTo(() => fake.GetObjectAsync("bucket", "subdir/data.csv", A<CancellationToken>._))
+            .Returns(getResp);
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempDir);
+
+            var written = await S3Operations.DownloadFileAsync(
+                fake,
+                "bucket",
+                "subdir/data.csv",
+                "./"
+            );
+
+            written.ShouldBe(content.Length);
+            var expectedFile = Path.Combine(tempDir, "data.csv");
+            File.Exists(expectedFile).ShouldBeTrue();
+            (await File.ReadAllTextAsync(expectedFile)).ShouldBe(content);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(origDir);
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
     public async Task DownloadFileAsync_writes_stream_to_local_path()
     {
         var fake = A.Fake<IAmazonS3>();
