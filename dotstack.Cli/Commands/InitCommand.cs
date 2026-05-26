@@ -1,5 +1,6 @@
 using Docker.DotNet;
 using Docker.DotNet.Models;
+using DotStack.Core;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -7,7 +8,11 @@ namespace DotStack.Cli.Commands;
 
 public class InitCommand : Command<InitCommand.Settings>
 {
-    public class Settings : CommandSettings { }
+    public class Settings : CommandSettings
+    {
+        [CommandOption("-v|--verbose")]
+        public bool Verbose { get; set; }
+    }
 
     protected override int Execute(
         CommandContext context,
@@ -15,6 +20,7 @@ public class InitCommand : Command<InitCommand.Settings>
         CancellationToken cancellationToken
     )
     {
+        VerboseConfig.Enabled = settings.Verbose;
         var cfg = Core.Configuration.Config.Load();
 
         if (cfg is not null)

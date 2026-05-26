@@ -1,3 +1,4 @@
+using DotStack.Core;
 using DotStack.Tui;
 using Spectre.Console.Cli;
 
@@ -11,6 +12,7 @@ public class BrowseCommand : Command<EndpointSettings>
         CancellationToken cancellationToken = default
     )
     {
+        VerboseConfig.Enabled = settings.Verbose;
         using var dashboard = new BrowseDashboard(settings.EndpointUrl);
         dashboard.Run();
         return 0;
