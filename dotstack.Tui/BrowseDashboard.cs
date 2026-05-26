@@ -1,12 +1,18 @@
-using Spectre.Console;
+using Docker.DotNet;
 using DotStack.Core.Aws;
 using DotStack.Core.Configuration;
 using DotStack.Core.S3;
-using Docker.DotNet;
+using Spectre.Console;
 
 namespace DotStack.Tui;
 
-public enum ServiceMode { S3, Ssm, Sqs, Sns }
+public enum ServiceMode
+{
+    S3,
+    Ssm,
+    Sqs,
+    Sns,
+}
 
 public class BrowseDashboard : IDisposable
 {
@@ -48,7 +54,8 @@ public class BrowseDashboard : IDisposable
         _ = RefreshContainerStatusAsync(cts.Token);
         _ = _panels[_mode].RefreshAsync(cts.Token);
 
-        AnsiConsole.Live(GetRenderable())
+        AnsiConsole
+            .Live(GetRenderable())
             .AutoClear(false)
             .Overflow(VerticalOverflow.Ellipsis)
             .Cropping(VerticalOverflowCropping.Top)
@@ -74,10 +81,18 @@ public class BrowseDashboard : IDisposable
         // Mode switching (always handled)
         switch (key.Key)
         {
-            case ConsoleKey.D1: SwitchMode(ServiceMode.S3, ct); return;
-            case ConsoleKey.D2: SwitchMode(ServiceMode.Ssm, ct); return;
-            case ConsoleKey.D3: SwitchMode(ServiceMode.Sqs, ct); return;
-            case ConsoleKey.D4: SwitchMode(ServiceMode.Sns, ct); return;
+            case ConsoleKey.D1:
+                SwitchMode(ServiceMode.S3, ct);
+                return;
+            case ConsoleKey.D2:
+                SwitchMode(ServiceMode.Ssm, ct);
+                return;
+            case ConsoleKey.D3:
+                SwitchMode(ServiceMode.Sqs, ct);
+                return;
+            case ConsoleKey.D4:
+                SwitchMode(ServiceMode.Sns, ct);
+                return;
         }
 
         // Delegate to active panel
@@ -110,19 +125,27 @@ public class BrowseDashboard : IDisposable
 
         // Container status
         var statusColor = _containerStatus.Contains("running", StringComparison.OrdinalIgnoreCase)
-            ? "green" : "yellow";
+            ? "green"
+            : "yellow";
         content.AppendLine($"[bold white on #0066CC] Container [/]");
-        content.AppendLine($"  [{statusColor} bold]● {_containerStatus.EscapeMarkup()}[/]  ({_containerName.EscapeMarkup()})");
+        content.AppendLine(
+            $"  [{statusColor} bold]● {_containerStatus.EscapeMarkup()}[/]  ({_containerName.EscapeMarkup()})"
+        );
         content.AppendLine();
 
         // Service tabs
         var tabs = _mode switch
         {
-            ServiceMode.S3 => "[bold] [dim][[1]][/] [white]S3[/]  [dim][[2]][/] SSM  [dim][[3]][/] SQS  [dim][[4]][/] SNS[/]",
-            ServiceMode.Ssm => "[bold] [dim][[1]][/] S3  [dim][[2]][/] [white]SSM[/]  [dim][[3]][/] SQS  [dim][[4]][/] SNS[/]",
-            ServiceMode.Sqs => "[bold] [dim][[1]][/] S3  [dim][[2]][/] SSM  [dim][[3]][/] [white]SQS[/]  [dim][[4]][/] SNS[/]",
-            ServiceMode.Sns => "[bold] [dim][[1]][/] S3  [dim][[2]][/] SSM  [dim][[3]][/] SQS  [dim][[4]][/] [white]SNS[/][/]",
-            _ => "[bold] [dim][[1]][/] [white]S3[/]  [dim][[2]][/] SSM  [dim][[3]][/] SQS  [dim][[4]][/] SNS[/]"
+            ServiceMode.S3 =>
+                "[bold] [dim][[1]][/] [white]S3[/]  [dim][[2]][/] SSM  [dim][[3]][/] SQS  [dim][[4]][/] SNS[/]",
+            ServiceMode.Ssm =>
+                "[bold] [dim][[1]][/] S3  [dim][[2]][/] [white]SSM[/]  [dim][[3]][/] SQS  [dim][[4]][/] SNS[/]",
+            ServiceMode.Sqs =>
+                "[bold] [dim][[1]][/] S3  [dim][[2]][/] SSM  [dim][[3]][/] [white]SQS[/]  [dim][[4]][/] SNS[/]",
+            ServiceMode.Sns =>
+                "[bold] [dim][[1]][/] S3  [dim][[2]][/] SSM  [dim][[3]][/] SQS  [dim][[4]][/] [white]SNS[/][/]",
+            _ =>
+                "[bold] [dim][[1]][/] [white]S3[/]  [dim][[2]][/] SSM  [dim][[3]][/] SQS  [dim][[4]][/] SNS[/]",
         };
         content.AppendLine($"  {tabs}");
         content.AppendLine();
@@ -140,7 +163,7 @@ public class BrowseDashboard : IDisposable
         return new Panel(new Markup(content.ToString()))
         {
             Padding = new Padding(0, 0, 0, 0),
-            Border = BoxBorder.None
+            Border = BoxBorder.None,
         };
     }
 
@@ -157,7 +180,9 @@ public class BrowseDashboard : IDisposable
 
             _containerName = config.ContainerName;
             var response = await _dockerClient.Containers.InspectContainerAsync(
-                config.ContainerName, ct);
+                config.ContainerName,
+                ct
+            );
             _containerStatus = response.State.Status;
         }
         catch

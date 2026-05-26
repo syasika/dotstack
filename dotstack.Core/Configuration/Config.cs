@@ -2,25 +2,18 @@ using System.Text.Json;
 
 namespace DotStack.Core.Configuration;
 
-public record Config(
-    string ContainerName,
-    string ImageName,
-    string Port,
-    string EndpointUrl)
+public record Config(string ContainerName, string ImageName, string Port, string EndpointUrl)
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
     private static string ConfigDirectory =>
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".dotstack");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotstack");
 
-    private static string ConfigFilePath =>
-        Path.Combine(ConfigDirectory, "config.json");
+    private static string ConfigFilePath => Path.Combine(ConfigDirectory, "config.json");
 
     public static Config? Load()
     {

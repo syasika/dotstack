@@ -1,19 +1,19 @@
 using Amazon.SimpleSystemsManagement;
-using Spectre.Console;
 using DotStack.Core.Aws;
 using DotStack.Core.Ssm;
+using Spectre.Console;
 
 namespace DotStack.Tui;
 
 public class SsmPanel : IServicePanel
 {
-    private readonly AmazonSimpleSystemsManagementClient _client;
+    private readonly IAmazonSimpleSystemsManagement _client;
     private List<SsmParameter> _parameters = [];
     private string _parametersError = "";
     private int _cursor;
     private string _statusLine = "";
 
-    public SsmPanel(AmazonSimpleSystemsManagementClient client)
+    public SsmPanel(IAmazonSimpleSystemsManagement client)
     {
         _client = client;
     }
@@ -27,10 +27,12 @@ public class SsmPanel : IServicePanel
         switch (key.Key)
         {
             case ConsoleKey.UpArrow or ConsoleKey.K:
-                if (_cursor > 0) _cursor--;
+                if (_cursor > 0)
+                    _cursor--;
                 return true;
 
-            case ConsoleKey.DownArrow or ConsoleKey.J:
+            case ConsoleKey.DownArrow
+            or ConsoleKey.J:
                 _cursor++;
                 return true;
 
@@ -42,7 +44,8 @@ public class SsmPanel : IServicePanel
                 HandleRefresh(ct);
                 return true;
 
-            case ConsoleKey.Delete or ConsoleKey.Backspace:
+            case ConsoleKey.Delete
+            or ConsoleKey.Backspace:
                 HandleDelete(ct);
                 return true;
         }
@@ -50,8 +53,7 @@ public class SsmPanel : IServicePanel
         return false;
     }
 
-    public Task RefreshAsync(CancellationToken ct) =>
-        RefreshParametersAsync(ct);
+    public Task RefreshAsync(CancellationToken ct) => RefreshParametersAsync(ct);
 
     private void HandleEnter(CancellationToken ct)
     {
@@ -96,7 +98,9 @@ public class SsmPanel : IServicePanel
             {
                 var prefix = i == _cursor ? "▸" : " ";
                 var p = _parameters[i];
-                content.AppendLine($"  {prefix} [bold]{p.Name.EscapeMarkup()}[/]  [grey]({p.Type}, v{p.Version})[/]");
+                content.AppendLine(
+                    $"  {prefix} [bold]{p.Name.EscapeMarkup()}[/]  [grey]({p.Type}, v{p.Version})[/]"
+                );
             }
 
         if (!string.IsNullOrEmpty(_statusLine))
@@ -134,7 +138,7 @@ public class SsmPanel : IServicePanel
     private async Task DeleteParameterAsync(CancellationToken ct)
     {
         try
-    {
+        {
             var p = _parameters[_cursor];
             await SsmOperations.DeleteParameterAsync(_client, p.Name, ct);
             _statusLine = "Deleted";
@@ -146,8 +150,7 @@ public class SsmPanel : IServicePanel
         }
     }
 
-    private static bool Confirm(string prompt) =>
-        AnsiConsole.Confirm(prompt, false);
+    private static bool Confirm(string prompt) => AnsiConsole.Confirm(prompt, false);
 
     public void Dispose()
     {

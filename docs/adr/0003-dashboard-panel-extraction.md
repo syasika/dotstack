@@ -22,7 +22,19 @@ The dashboard now delegates each service's concerns to a dedicated panel class i
 ## What wasn't added (and why)
 
 - **No per-panel test coverage** — each panel is testable through `IServicePanel` but no tests were written as part of this extraction. Adding them is deferred to a test-focused follow-up.
-- **No `IAwsClientFactory` seam** — panels still take concrete AWS SDK clients. This is candidate 3 from the architecture review — deferred because it's a separate decision orthogonal to the panel extraction.
+
+## What was added later
+
+- **`IAmazon*` client interfaces** — all four panels now accept AWS SDK interfaces (`IAmazonS3`, `IAmazonSimpleSystemsManagement`, `IAmazonSQS`, `IAmazonSimpleNotificationService`) instead of concrete clients. This enables mocking in tests. The change was applied across all service layers in a later pass:
+  - `S3Panel` — already used `IAmazonS3` from extraction
+  - `SsmPanel` — refactored from `AmazonSimpleSystemsManagementClient`
+  - `SqsPanel` — refactored from `AmazonSQSClient`
+  - `SnsPanel` — refactored from `AmazonSimpleNotificationServiceClient`
+- **Core operation tests** — `S3OperationsTests`, `SqsOperationsTests`, `SnsOperationsTests`, `SsmOperationsTests` added covering happy paths, pagination, and null-collection edge cases exposed by v4 AWS SDK defaults.
+
+### Motivation
+
+The original extraction deferred the client factory seam as orthogonal work. During test coverage, AWS SDK v4's tendency to default collection properties to `null` caused `NullReferenceException`s in list/paginate operations. Refactoring to interfaces was a prerequisite for mocking, and the null-guard fixes fell out naturally from the test-first approach.
 
 ## Trade-offs
 

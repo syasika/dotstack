@@ -12,109 +12,148 @@ public record Message(string Id, string Body, string ReceiptHandle);
 public static class SqsOperations
 {
     public static Task<List<Queue>> ListQueuesAsync(
-        AmazonSQSClient client, CancellationToken ct = default) =>
-        AwsTracing.TraceAsync("SQS.ListQueues", "sqs", async activity =>
-        {
-            var queues = new List<Queue>();
-            var request = new ListQueuesRequest();
-
-            ListQueuesResponse response;
-            do
+        IAmazonSQS client,
+        CancellationToken ct = default
+    ) =>
+        AwsTracing.TraceAsync(
+            "SQS.ListQueues",
+            "sqs",
+            async activity =>
             {
-                response = await client.ListQueuesAsync(request, ct);
-                foreach (var url in response.QueueUrls)
-                    queues.Add(new Queue(ExtractQueueName(url), url));
+                var queues = new List<Queue>();
+                var request = new ListQueuesRequest();
 
-                request.NextToken = response.NextToken;
+                ListQueuesResponse response;
+                do
+                {
+                    response = await client.ListQueuesAsync(request, ct);
+                    if (response.QueueUrls is { Count: > 0 })
+                        foreach (var url in response.QueueUrls)
+                            queues.Add(new Queue(ExtractQueueName(url), url));
+
+                    request.NextToken = response.NextToken;
+                } while (!string.IsNullOrEmpty(response.NextToken));
+
+                activity?.SetTag("queue.count", queues.Count);
+                return queues;
             }
-            while (!string.IsNullOrEmpty(response.NextToken));
-
-            activity?.SetTag("queue.count", queues.Count);
-            return queues;
-        });
+        );
 
     public static Task<Queue> CreateQueueAsync(
-        AmazonSQSClient client, string name, CancellationToken ct = default) =>
-        AwsTracing.TraceAsync("SQS.CreateQueue", "sqs", async activity =>
-        {
-            activity?.SetTag("queue.name", name);
+        IAmazonSQS client,
+        string name,
+        CancellationToken ct = default
+    ) =>
+        AwsTracing.TraceAsync(
+            "SQS.CreateQueue",
+            "sqs",
+            async activity =>
+            {
+                activity?.SetTag("queue.name", name);
 
-            var request = new CreateQueueRequest { QueueName = name };
-            var response = await client.CreateQueueAsync(request, ct);
+                var request = new CreateQueueRequest { QueueName = name };
+                var response = await client.CreateQueueAsync(request, ct);
 
-            activity?.SetTag("queue.url", response.QueueUrl);
-            return new Queue(name, response.QueueUrl);
-        });
+                activity?.SetTag("queue.url", response.QueueUrl);
+                return new Queue(name, response.QueueUrl);
+            }
+        );
 
     public static Task DeleteQueueAsync(
-        AmazonSQSClient client, string queueUrl, CancellationToken ct = default) =>
-        AwsTracing.TraceAsync("SQS.DeleteQueue", "sqs", async activity =>
-        {
-            activity?.SetTag("queue.url", queueUrl);
+        IAmazonSQS client,
+        string queueUrl,
+        CancellationToken ct = default
+    ) =>
+        AwsTracing.TraceAsync(
+            "SQS.DeleteQueue",
+            "sqs",
+            async activity =>
+            {
+                activity?.SetTag("queue.url", queueUrl);
 
-            var request = new DeleteQueueRequest { QueueUrl = queueUrl };
-            await client.DeleteQueueAsync(request, ct);
-        });
+                var request = new DeleteQueueRequest { QueueUrl = queueUrl };
+                await client.DeleteQueueAsync(request, ct);
+            }
+        );
 
     public static Task<string> SendMessageAsync(
-        AmazonSQSClient client, string queueUrl, string body,
-        CancellationToken ct = default) =>
-        AwsTracing.TraceAsync("SQS.SendMessage", "sqs", async activity =>
-        {
-            activity?.SetTag("queue.url", queueUrl);
-            activity?.SetTag("message.size", body.Length);
-
-            var request = new SendMessageRequest
+        IAmazonSQS client,
+        string queueUrl,
+        string body,
+        CancellationToken ct = default
+    ) =>
+        AwsTracing.TraceAsync(
+            "SQS.SendMessage",
+            "sqs",
+            async activity =>
             {
-                QueueUrl = queueUrl,
-                MessageBody = body
-            };
+                activity?.SetTag("queue.url", queueUrl);
+                activity?.SetTag("message.size", body.Length);
 
-            var response = await client.SendMessageAsync(request, ct);
-            activity?.SetTag("message.id", response.MessageId);
-            return response.MessageId;
-        });
+                var request = new SendMessageRequest { QueueUrl = queueUrl, MessageBody = body };
+
+                var response = await client.SendMessageAsync(request, ct);
+                activity?.SetTag("message.id", response.MessageId);
+                return response.MessageId;
+            }
+        );
 
     public static Task<List<Message>> ReceiveMessagesAsync(
-        AmazonSQSClient client, string queueUrl,
-        int maxMessages = 10, CancellationToken ct = default) =>
-        AwsTracing.TraceAsync("SQS.ReceiveMessages", "sqs", async activity =>
-        {
-            activity?.SetTag("queue.url", queueUrl);
-            activity?.SetTag("max.messages", maxMessages);
-
-            var request = new ReceiveMessageRequest
+        IAmazonSQS client,
+        string queueUrl,
+        int maxMessages = 10,
+        CancellationToken ct = default
+    ) =>
+        AwsTracing.TraceAsync(
+            "SQS.ReceiveMessages",
+            "sqs",
+            async activity =>
             {
-                QueueUrl = queueUrl,
-                MaxNumberOfMessages = maxMessages,
-                WaitTimeSeconds = 2
-            };
+                activity?.SetTag("queue.url", queueUrl);
+                activity?.SetTag("max.messages", maxMessages);
 
-            var response = await client.ReceiveMessageAsync(request, ct);
+                var request = new ReceiveMessageRequest
+                {
+                    QueueUrl = queueUrl,
+                    MaxNumberOfMessages = maxMessages,
+                    WaitTimeSeconds = 2,
+                };
 
-            var messages = response.Messages
-                .Select(m => new Message(m.MessageId, m.Body, m.ReceiptHandle))
-                .ToList();
+                var response = await client.ReceiveMessageAsync(request, ct);
 
-            activity?.SetTag("received.count", messages.Count);
-            return messages;
-        });
+                var messages = response.Messages is { Count: > 0 }
+                    ? response
+                        .Messages.Select(m => new Message(m.MessageId, m.Body, m.ReceiptHandle))
+                        .ToList()
+                    : [];
+
+                activity?.SetTag("received.count", messages.Count);
+                return messages;
+            }
+        );
 
     public static Task DeleteMessageAsync(
-        AmazonSQSClient client, string queueUrl, string receiptHandle,
-        CancellationToken ct = default) =>
-        AwsTracing.TraceAsync("SQS.DeleteMessage", "sqs", async activity =>
-        {
-            activity?.SetTag("queue.url", queueUrl);
-
-            var request = new DeleteMessageRequest
+        IAmazonSQS client,
+        string queueUrl,
+        string receiptHandle,
+        CancellationToken ct = default
+    ) =>
+        AwsTracing.TraceAsync(
+            "SQS.DeleteMessage",
+            "sqs",
+            async activity =>
             {
-                QueueUrl = queueUrl,
-                ReceiptHandle = receiptHandle
-            };
+                activity?.SetTag("queue.url", queueUrl);
 
-            await client.DeleteMessageAsync(request, ct);
-        });
+                var request = new DeleteMessageRequest
+                {
+                    QueueUrl = queueUrl,
+                    ReceiptHandle = receiptHandle,
+                };
+
+                await client.DeleteMessageAsync(request, ct);
+            }
+        );
 
     public static string ExtractQueueName(string queueUrl)
     {

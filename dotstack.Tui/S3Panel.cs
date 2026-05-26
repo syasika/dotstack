@@ -1,13 +1,13 @@
 using Amazon.S3;
-using Spectre.Console;
 using DotStack.Core.Aws;
 using DotStack.Core.S3;
+using Spectre.Console;
 
 namespace DotStack.Tui;
 
 public class S3Panel : IServicePanel
 {
-    private readonly AmazonS3Client _client;
+    private readonly IAmazonS3 _client;
     private List<string> _buckets = [];
     private string _bucketsError = "";
     private string _currentBucket = "";
@@ -17,14 +17,15 @@ public class S3Panel : IServicePanel
     private int _cursor;
     private string _statusLine = "";
 
-    public S3Panel(AmazonS3Client client)
+    public S3Panel(IAmazonS3 client)
     {
         _client = client;
     }
 
-    public string HelpText => _showingObjects
-        ? "↑/↓ nav · del delete · esc back · r refresh"
-        : "↑/↓ nav · enter browse · r refresh";
+    public string HelpText =>
+        _showingObjects
+            ? "↑/↓ nav · del delete · esc back · r refresh"
+            : "↑/↓ nav · enter browse · r refresh";
 
     public bool IsAtRootLevel => !_showingObjects;
 
@@ -33,10 +34,12 @@ public class S3Panel : IServicePanel
         switch (key.Key)
         {
             case ConsoleKey.UpArrow or ConsoleKey.K:
-                if (_cursor > 0) _cursor--;
+                if (_cursor > 0)
+                    _cursor--;
                 return true;
 
-            case ConsoleKey.DownArrow or ConsoleKey.J:
+            case ConsoleKey.DownArrow
+            or ConsoleKey.J:
                 _cursor++;
                 return true;
 
@@ -48,7 +51,8 @@ public class S3Panel : IServicePanel
                 HandleRefresh(ct);
                 return true;
 
-            case ConsoleKey.Delete or ConsoleKey.Backspace:
+            case ConsoleKey.Delete
+            or ConsoleKey.Backspace:
                 HandleDelete(ct);
                 return true;
 
@@ -98,7 +102,8 @@ public class S3Panel : IServicePanel
         if (_showingObjects && _cursor < _objects.Count)
         {
             var obj = _objects[_cursor];
-            if (obj.Key.EndsWith('/')) return;
+            if (obj.Key.EndsWith('/'))
+                return;
             if (Confirm($"Delete s3://{_currentBucket}/{obj.Key}?"))
             {
                 _statusLine = "Deleting...";
@@ -132,7 +137,9 @@ public class S3Panel : IServicePanel
 
     private void RenderObjects(System.Text.StringBuilder content)
     {
-        content.AppendLine($"[bold white on #0066CC] Objects — {_currentBucket.EscapeMarkup()} [/]");
+        content.AppendLine(
+            $"[bold white on #0066CC] Objects — {_currentBucket.EscapeMarkup()} [/]"
+        );
         if (!string.IsNullOrEmpty(_objectsError))
             content.AppendLine($"  [yellow]{_objectsError.EscapeMarkup()}[/]");
         else if (_objects.Count == 0)
@@ -143,10 +150,13 @@ public class S3Panel : IServicePanel
                 var prefix = i == _cursor ? "▸" : " ";
                 var icon = _objects[i].Key.EndsWith('/') ? "📁" : "📄";
                 var color = _objects[i].Key.EndsWith('/') ? "#00AAAA" : "white";
-                var size = _objects[i].Size > 0 && !_objects[i].Key.EndsWith('/')
-                    ? $" [grey]({_objects[i].Size} bytes)[/]"
-                    : "";
-                content.AppendLine($"  {prefix} {icon} [{color}]{_objects[i].Key.EscapeMarkup()}[/]{size}");
+                var size =
+                    _objects[i].Size > 0 && !_objects[i].Key.EndsWith('/')
+                        ? $" [grey]({_objects[i].Size} bytes)[/]"
+                        : "";
+                content.AppendLine(
+                    $"  {prefix} {icon} [{color}]{_objects[i].Key.EscapeMarkup()}[/]{size}"
+                );
             }
     }
 
@@ -195,8 +205,7 @@ public class S3Panel : IServicePanel
         }
     }
 
-    private static bool Confirm(string prompt) =>
-        AnsiConsole.Confirm(prompt, false);
+    private static bool Confirm(string prompt) => AnsiConsole.Confirm(prompt, false);
 
     public void Dispose()
     {

@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <RootNamespace>DotStack.Tui.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
@@ -13,10 +12,10 @@
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Shouldly" />
     <PackageReference Include="FakeItEasy" />
+    <PackageReference Include="coverlet.collector" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\dotstack.Tui\dotstack.Tui.csproj" />
   </ItemGroup>
-
 </Project>

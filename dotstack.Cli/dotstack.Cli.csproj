@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <RootNamespace>DotStack.Cli</RootNamespace>
@@ -17,5 +16,4 @@
     <ProjectReference Include="..\dotstack.Core\dotstack.Core.csproj" />
     <ProjectReference Include="..\dotstack.Tui\dotstack.Tui.csproj" />
   </ItemGroup>
-
 </Project>

@@ -6,8 +6,10 @@ namespace DotStack.Core.Aws;
 public static class AwsTracing
 {
     public static async Task<T> TraceAsync<T>(
-        string operation, string service,
-        Func<Activity?, Task<T>> call)
+        string operation,
+        string service,
+        Func<Activity?, Task<T>> call
+    )
     {
         using var activity = ActivitySources.DotStack.StartActivity(operation);
         activity?.SetTag("service", service);
@@ -24,8 +26,10 @@ public static class AwsTracing
     }
 
     public static async Task TraceAsync(
-        string operation, string service,
-        Func<Activity?, Task> call)
+        string operation,
+        string service,
+        Func<Activity?, Task> call
+    )
     {
         using var activity = ActivitySources.DotStack.StartActivity(operation);
         activity?.SetTag("service", service);
