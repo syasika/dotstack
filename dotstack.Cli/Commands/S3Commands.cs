@@ -1,3 +1,5 @@
+using DotStack.Cli.Abstractions;
+using DotStack.Core;
 using DotStack.Core.Aws;
 using DotStack.Core.S3;
 using Spectre.Console;
@@ -39,13 +41,23 @@ public static class S3Commands
 
     public class LsCommand : Command<LsSettings>
     {
+        private readonly IAnsiConsole _console;
+        private readonly IAwsClientFactory _clientFactory;
+
+        public LsCommand(IAnsiConsole console, IAwsClientFactory clientFactory)
+        {
+            _console = console;
+            _clientFactory = clientFactory;
+        }
+
         protected override int Execute(
             CommandContext context,
             LsSettings settings,
             CancellationToken cancellationToken
         )
         {
-            var client = AwsClientFactory.CreateS3Client(settings.EndpointUrl);
+            VerboseConfig.Enabled = settings.Verbose;
+            var client = _clientFactory.CreateS3Client(settings.EndpointUrl);
 
             if (settings.Bucket is null)
             {
@@ -55,12 +67,12 @@ public static class S3Commands
                     .GetResult();
                 if (buckets.Count == 0)
                 {
-                    AnsiConsole.MarkupLine("[grey italic]No buckets.[/]");
+                    _console.MarkupLine("[grey italic]No buckets.[/]");
                     return 0;
                 }
-                AnsiConsole.MarkupLine($"[bold white on #0066CC] Buckets ({buckets.Count}) [/]");
+                _console.MarkupLine($"[bold white on #0066CC] Buckets ({buckets.Count}) [/]");
                 foreach (var b in buckets)
-                    AnsiConsole.MarkupLine($"  📦 [bold #0044CC]{b}[/]");
+                    _console.MarkupLine($"  📦 [bold #0044CC]{b}[/]");
                 return 0;
             }
 
@@ -79,38 +91,48 @@ public static class S3Commands
                 .GetResult();
             if (objects.Count == 0)
             {
-                AnsiConsole.MarkupLine("[grey italic]No objects.[/]");
+                _console.MarkupLine("[grey italic]No objects.[/]");
                 return 0;
             }
 
             var label = $" s3://{bucket}/";
             if (!string.IsNullOrEmpty(prefix))
                 label += prefix;
-            AnsiConsole.MarkupLine($"[bold white on #0066CC]{label}[/]");
+            _console.MarkupLine($"[bold white on #0066CC]{label}[/]");
             foreach (var obj in objects)
             {
                 if (obj.Key.EndsWith("/"))
-                    AnsiConsole.MarkupLine($"  📁 [#00AAAA]{obj.Key}[/]");
+                    _console.MarkupLine($"  📁 [#00AAAA]{obj.Key}[/]");
                 else
-                    AnsiConsole.MarkupLine(
+                    _console.MarkupLine(
                         $"  📄 {obj.Key}{(obj.Size > 0 ? $"  [grey]({obj.Size} bytes)[/]" : "")}"
                     );
             }
             return 0;
         }
 
-        private static string StripS3Prefix(string s) => s.StartsWith("s3://") ? s[5..] : s;
+        internal static string StripS3Prefix(string s) => s.StartsWith("s3://") ? s[5..] : s;
     }
 
     public class MbCommand : Command<BucketSettings>
     {
+        private readonly IAnsiConsole _console;
+        private readonly IAwsClientFactory _clientFactory;
+
+        public MbCommand(IAnsiConsole console, IAwsClientFactory clientFactory)
+        {
+            _console = console;
+            _clientFactory = clientFactory;
+        }
+
         protected override int Execute(
             CommandContext context,
             BucketSettings settings,
             CancellationToken cancellationToken
         )
         {
-            var client = AwsClientFactory.CreateS3Client(settings.EndpointUrl);
+            VerboseConfig.Enabled = settings.Verbose;
+            var client = _clientFactory.CreateS3Client(settings.EndpointUrl);
             var bucket = settings.Bucket.StartsWith("s3://")
                 ? settings.Bucket[5..]
                 : settings.Bucket;
@@ -118,20 +140,30 @@ public static class S3Commands
                 .CreateBucketAsync(client, bucket, cancellationToken)
                 .GetAwaiter()
                 .GetResult();
-            AnsiConsole.MarkupLine($"[green bold]✓[/] Bucket '[bold]{bucket}[/]' created");
+            _console.MarkupLine($"[green bold]✓[/] Bucket '[bold]{bucket}[/]' created");
             return 0;
         }
     }
 
     public class RbCommand : Command<BucketForceSettings>
     {
+        private readonly IAnsiConsole _console;
+        private readonly IAwsClientFactory _clientFactory;
+
+        public RbCommand(IAnsiConsole console, IAwsClientFactory clientFactory)
+        {
+            _console = console;
+            _clientFactory = clientFactory;
+        }
+
         protected override int Execute(
             CommandContext context,
             BucketForceSettings settings,
             CancellationToken cancellationToken
         )
         {
-            var client = AwsClientFactory.CreateS3Client(settings.EndpointUrl);
+            VerboseConfig.Enabled = settings.Verbose;
+            var client = _clientFactory.CreateS3Client(settings.EndpointUrl);
             var bucket = settings.Bucket.StartsWith("s3://")
                 ? settings.Bucket[5..]
                 : settings.Bucket;
@@ -146,20 +178,30 @@ public static class S3Commands
                 .DeleteBucketAsync(client, bucket, cancellationToken)
                 .GetAwaiter()
                 .GetResult();
-            AnsiConsole.MarkupLine($"[green bold]✓[/] Bucket '[bold]{bucket}[/]' removed");
+            _console.MarkupLine($"[green bold]✓[/] Bucket '[bold]{bucket}[/]' removed");
             return 0;
         }
     }
 
     public class CpCommand : Command<CpSettings>
     {
+        private readonly IAnsiConsole _console;
+        private readonly IAwsClientFactory _clientFactory;
+
+        public CpCommand(IAnsiConsole console, IAwsClientFactory clientFactory)
+        {
+            _console = console;
+            _clientFactory = clientFactory;
+        }
+
         protected override int Execute(
             CommandContext context,
             CpSettings settings,
             CancellationToken cancellationToken
         )
         {
-            var client = AwsClientFactory.CreateS3Client(settings.EndpointUrl);
+            VerboseConfig.Enabled = settings.Verbose;
+            var client = _clientFactory.CreateS3Client(settings.EndpointUrl);
             var src = settings.Source;
             var dst = settings.Destination;
 
@@ -168,14 +210,14 @@ public static class S3Commands
                 var (bucket, key) = ParseS3Path(src);
                 if (string.IsNullOrEmpty(key))
                 {
-                    AnsiConsole.MarkupLine($"[red]Invalid s3 path: {src}[/]");
+                    _console.MarkupLine($"[red]Invalid s3 path: {src}[/]");
                     return 1;
                 }
                 var written = S3Operations
                     .DownloadFileAsync(client, bucket, key, dst, cancellationToken)
                     .GetAwaiter()
                     .GetResult();
-                AnsiConsole.MarkupLine(
+                _console.MarkupLine(
                     $"[green bold]✓[/] Downloaded s3://{bucket}/{key} → {dst} ({written} bytes)"
                 );
             }
@@ -184,18 +226,18 @@ public static class S3Commands
                 var (bucket, key) = ParseS3Path(dst);
                 if (string.IsNullOrEmpty(key))
                 {
-                    AnsiConsole.MarkupLine($"[red]Invalid s3 path: {dst}[/]");
+                    _console.MarkupLine($"[red]Invalid s3 path: {dst}[/]");
                     return 1;
                 }
                 S3Operations
                     .UploadFileAsync(client, bucket, key, src, cancellationToken)
                     .GetAwaiter()
                     .GetResult();
-                AnsiConsole.MarkupLine($"[green bold]✓[/] Uploaded {src} → s3://{bucket}/{key}");
+                _console.MarkupLine($"[green bold]✓[/] Uploaded {src} → s3://{bucket}/{key}");
             }
             else
             {
-                AnsiConsole.MarkupLine(
+                _console.MarkupLine(
                     "[red]One argument must be an s3:// path and the other a local path[/]"
                 );
                 return 1;
@@ -203,9 +245,9 @@ public static class S3Commands
             return 0;
         }
 
-        private static bool IsS3Path(string s) => s.StartsWith("s3://");
+        internal static bool IsS3Path(string s) => s.StartsWith("s3://");
 
-        private static (string bucket, string key) ParseS3Path(string s)
+        internal static (string bucket, string key) ParseS3Path(string s)
         {
             var path = s.StartsWith("s3://") ? s[5..] : s;
             var parts = path.Split('/', 2);

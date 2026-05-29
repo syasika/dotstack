@@ -1,3 +1,5 @@
+using DotStack.Cli.Abstractions;
+using DotStack.Core;
 using DotStack.Core.Aws;
 using DotStack.Core.Ssm;
 using Spectre.Console;
@@ -27,25 +29,35 @@ public static class SsmCommands
 
     public class LsCommand : Command<EndpointSettings>
     {
+        private readonly IAnsiConsole _console;
+        private readonly IAwsClientFactory _clientFactory;
+
+        public LsCommand(IAnsiConsole console, IAwsClientFactory clientFactory)
+        {
+            _console = console;
+            _clientFactory = clientFactory;
+        }
+
         protected override int Execute(
             CommandContext context,
             EndpointSettings settings,
             CancellationToken cancellationToken
         )
         {
-            var client = AwsClientFactory.CreateSsmClient(settings.EndpointUrl);
+            VerboseConfig.Enabled = settings.Verbose;
+            var client = _clientFactory.CreateSsmClient(settings.EndpointUrl);
             var parameters = SsmOperations
                 .ListAllParametersAsync(client, cancellationToken)
                 .GetAwaiter()
                 .GetResult();
             if (parameters.Count == 0)
             {
-                AnsiConsole.MarkupLine("[grey italic]No parameters.[/]");
+                _console.MarkupLine("[grey italic]No parameters.[/]");
                 return 0;
             }
-            AnsiConsole.MarkupLine($"[bold white on #0066CC] Parameters ({parameters.Count}) [/]");
+            _console.MarkupLine($"[bold white on #0066CC] Parameters ({parameters.Count}) [/]");
             foreach (var p in parameters)
-                AnsiConsole.MarkupLine(
+                _console.MarkupLine(
                     $"  [bold #0044CC]{p.Name}[/]  [grey]({p.Type}, v{p.Version})[/]"
                 );
             return 0;
@@ -54,34 +66,54 @@ public static class SsmCommands
 
     public class GetCommand : Command<NameSettings>
     {
+        private readonly IAnsiConsole _console;
+        private readonly IAwsClientFactory _clientFactory;
+
+        public GetCommand(IAnsiConsole console, IAwsClientFactory clientFactory)
+        {
+            _console = console;
+            _clientFactory = clientFactory;
+        }
+
         protected override int Execute(
             CommandContext context,
             NameSettings settings,
             CancellationToken cancellationToken
         )
         {
-            var client = AwsClientFactory.CreateSsmClient(settings.EndpointUrl);
+            VerboseConfig.Enabled = settings.Verbose;
+            var client = _clientFactory.CreateSsmClient(settings.EndpointUrl);
             var p = SsmOperations
                 .GetParameterAsync(client, settings.Name, cancellationToken)
                 .GetAwaiter()
                 .GetResult();
-            AnsiConsole.MarkupLine($"[bold]Name:[/]  {p.Name}");
-            AnsiConsole.MarkupLine($"[bold]Type:[/]  {p.Type}");
-            AnsiConsole.MarkupLine($"[bold]Value:[/] {p.Value}");
-            AnsiConsole.MarkupLine($"[bold]Version:[/]  v{p.Version}");
+            _console.MarkupLine($"[bold]Name:[/]  {p.Name}");
+            _console.MarkupLine($"[bold]Type:[/]  {p.Type}");
+            _console.MarkupLine($"[bold]Value:[/] {p.Value}");
+            _console.MarkupLine($"[bold]Version:[/]  v{p.Version}");
             return 0;
         }
     }
 
     public class PutCommand : Command<PutSettings>
     {
+        private readonly IAnsiConsole _console;
+        private readonly IAwsClientFactory _clientFactory;
+
+        public PutCommand(IAnsiConsole console, IAwsClientFactory clientFactory)
+        {
+            _console = console;
+            _clientFactory = clientFactory;
+        }
+
         protected override int Execute(
             CommandContext context,
             PutSettings settings,
             CancellationToken cancellationToken
         )
         {
-            var client = AwsClientFactory.CreateSsmClient(settings.EndpointUrl);
+            VerboseConfig.Enabled = settings.Verbose;
+            var client = _clientFactory.CreateSsmClient(settings.EndpointUrl);
             SsmOperations
                 .PutParameterAsync(
                     client,
@@ -92,25 +124,35 @@ public static class SsmCommands
                 )
                 .GetAwaiter()
                 .GetResult();
-            AnsiConsole.MarkupLine($"[green bold]✓[/] Parameter '[bold]{settings.Name}[/]' saved");
+            _console.MarkupLine($"[green bold]✓[/] Parameter '[bold]{settings.Name}[/]' saved");
             return 0;
         }
     }
 
     public class RmCommand : Command<NameSettings>
     {
+        private readonly IAnsiConsole _console;
+        private readonly IAwsClientFactory _clientFactory;
+
+        public RmCommand(IAnsiConsole console, IAwsClientFactory clientFactory)
+        {
+            _console = console;
+            _clientFactory = clientFactory;
+        }
+
         protected override int Execute(
             CommandContext context,
             NameSettings settings,
             CancellationToken cancellationToken
         )
         {
-            var client = AwsClientFactory.CreateSsmClient(settings.EndpointUrl);
+            VerboseConfig.Enabled = settings.Verbose;
+            var client = _clientFactory.CreateSsmClient(settings.EndpointUrl);
             SsmOperations
                 .DeleteParameterAsync(client, settings.Name, cancellationToken)
                 .GetAwaiter()
                 .GetResult();
-            AnsiConsole.MarkupLine(
+            _console.MarkupLine(
                 $"[green bold]✓[/] Parameter '[bold]{settings.Name}[/]' deleted"
             );
             return 0;
