@@ -89,6 +89,54 @@ from `ExecuteAsync` is forwarded to the underlying SDK/Docker call.
 **Infra changes:**
 - Added `CommandExtensions.Execute()` overload accepting `CancellationToken`
 
+---
+
+### ✅ Phase 3 — Core Project Cancellation Token Forwarding (COMPLETE)
+
+**Added: 23 tests — all passing. Core project: 101 tests, CLI: 98 tests. Total: 199.**
+
+Each `dotstack.Core` operation now has a test proving the `CancellationToken`
+parameter is forwarded to the underlying AWS SDK call.
+
+**Test files augmented:**
+
+| File | Tests added | What it covers |
+|------|-------------|----------------|
+| `S3OperationsTests.cs` | 8 | ListBuckets, ListObjects, CreateBucket, DeleteBucket, DeleteObject, EmptyBucket, UploadFile, DownloadFile |
+| `SsmOperationsTests.cs` | 5 | ListAllParameters, ListParameters, GetParameter, PutParameter, DeleteParameter |
+| `SqsOperationsTests.cs` | 6 | ListQueues, CreateQueue, DeleteQueue, SendMessage, ReceiveMessages, DeleteMessage |
+| `SnsOperationsTests.cs` | 4 | ListTopics, CreateTopic, DeleteTopic, PublishMessage |
+
+**Core project test summary (78 → 101 tests):**
+- `ActivitySourcesTests` — 1 test
+- `AwsClientFactoryTests` — 4 tests
+- `AwsExceptionHelperTests` — 9 tests
+- `AwsTracingTests` — 11 tests
+- `ConfigTests` — 6 tests
+- `S3OperationsTests` — 22 tests
+- `SsmOperationsTests` — 15 tests
+- `SqsOperationsTests` — 19 tests
+- `SnsOperationsTests` — 14 tests
+
+**Added: 24 tests — all passing. Total: 98 tests.**
+
+Each command class now has at least one test proving the `CancellationToken`
+from `ExecuteAsync` is forwarded to the underlying SDK/Docker call.
+
+**Test files augmented:**
+
+| File | Tests added | What it covers |
+|------|-------------|----------------|
+| `S3CommandsTests.cs` | 5 | Ls, Mb, Rb, Cp (upload + download) forward token |
+| `SsmCommandsTests.cs` | 4 | Ls, Get, Put, Rm forward token |
+| `SqsCommandsTests.cs` | 5 | Ls, Create, Rm, Send, Recv forward token |
+| `SnsCommandsTests.cs` | 4 | Ls, Create, Rm, Publish forward token |
+| `ContainerCommandsTests.cs` | 4 | Status, Start, Stop, Remove forward token |
+| `InitCommandTests.cs` | 2 | Running-container path, no-config setup path forward token |
+
+**Infra changes:**
+- Added `CommandExtensions.Execute()` overload accepting `CancellationToken`
+
 #### Infra changes
 
 - Added `TestHelpers.cs` — `FakeRemainingArguments`, `TestHelpers.CreateContext()`, `CommandExtensions.Execute()` helper

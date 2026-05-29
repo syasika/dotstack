@@ -272,4 +272,82 @@ public class SsmOperationsTests
             )
             .MustHaveHappenedOnceExactly();
     }
+
+    // ---- Cancellation token forwarding ----
+
+    [Fact]
+    public async Task ListAllParametersAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonSimpleSystemsManagement>();
+        A.CallTo(() => fake.DescribeParametersAsync(A<DescribeParametersRequest>._, A<CancellationToken>._))
+            .Invokes((DescribeParametersRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new DescribeParametersResponse { Parameters = [] });
+
+        await SsmOperations.ListAllParametersAsync(fake, cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task ListParametersAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonSimpleSystemsManagement>();
+        A.CallTo(() => fake.DescribeParametersAsync(A<DescribeParametersRequest>._, A<CancellationToken>._))
+            .Invokes((DescribeParametersRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new DescribeParametersResponse { Parameters = [] });
+
+        await SsmOperations.ListParametersAsync(fake, ct: cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task GetParameterAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonSimpleSystemsManagement>();
+        A.CallTo(() => fake.GetParameterAsync(A<GetParameterRequest>._, A<CancellationToken>._))
+            .Invokes((GetParameterRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new GetParameterResponse
+            {
+                Parameter = new Amazon.SimpleSystemsManagement.Model.Parameter { Name = "/k", Value = "v" },
+            });
+
+        await SsmOperations.GetParameterAsync(fake, "/k", cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task PutParameterAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonSimpleSystemsManagement>();
+        A.CallTo(() => fake.PutParameterAsync(A<PutParameterRequest>._, A<CancellationToken>._))
+            .Invokes((PutParameterRequest _, CancellationToken ct) => captured = ct);
+
+        await SsmOperations.PutParameterAsync(fake, "/k", "v", ct: cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task DeleteParameterAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonSimpleSystemsManagement>();
+        A.CallTo(() => fake.DeleteParameterAsync(A<DeleteParameterRequest>._, A<CancellationToken>._))
+            .Invokes((DeleteParameterRequest _, CancellationToken ct) => captured = ct);
+
+        await SsmOperations.DeleteParameterAsync(fake, "/k", cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
 }

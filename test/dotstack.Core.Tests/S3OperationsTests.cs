@@ -365,4 +365,151 @@ public class S3OperationsTests
                 Directory.Delete(destDir, true);
         }
     }
+
+    // ---- Cancellation token forwarding ----
+
+    [Fact]
+    public async Task ListBucketsAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonS3>();
+        A.CallTo(() => fake.ListBucketsAsync(A<CancellationToken>._))
+            .Invokes((CancellationToken ct) => captured = ct)
+            .Returns(new ListBucketsResponse { Buckets = [] });
+
+        await S3Operations.ListBucketsAsync(fake, cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task ListObjectsAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonS3>();
+        A.CallTo(() => fake.ListObjectsV2Async(A<ListObjectsV2Request>._, A<CancellationToken>._))
+            .Invokes((ListObjectsV2Request _, CancellationToken ct) => captured = ct)
+            .Returns(new ListObjectsV2Response { S3Objects = [], CommonPrefixes = [] });
+
+        await S3Operations.ListObjectsAsync(fake, "bucket", "", cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task CreateBucketAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonS3>();
+        A.CallTo(() => fake.PutBucketAsync(A<string>._, A<CancellationToken>._))
+            .Invokes((string _, CancellationToken ct) => captured = ct);
+
+        await S3Operations.CreateBucketAsync(fake, "b", cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task DeleteBucketAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonS3>();
+        A.CallTo(() => fake.DeleteBucketAsync(A<string>._, A<CancellationToken>._))
+            .Invokes((string _, CancellationToken ct) => captured = ct);
+
+        await S3Operations.DeleteBucketAsync(fake, "b", cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task DeleteObjectAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonS3>();
+        A.CallTo(() => fake.DeleteObjectAsync(A<string>._, A<string>._, A<CancellationToken>._))
+            .Invokes((string _, string _, CancellationToken ct) => captured = ct);
+
+        await S3Operations.DeleteObjectAsync(fake, "b", "k", cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task EmptyBucketAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken listCaptured = default;
+        CancellationToken deleteCaptured = default;
+        var fake = A.Fake<IAmazonS3>();
+        A.CallTo(() => fake.ListObjectsV2Async(A<ListObjectsV2Request>._, A<CancellationToken>._))
+            .Invokes((ListObjectsV2Request _, CancellationToken ct) => listCaptured = ct)
+            .Returns(new ListObjectsV2Response { S3Objects = [], IsTruncated = false });
+        A.CallTo(() => fake.DeleteObjectsAsync(A<DeleteObjectsRequest>._, A<CancellationToken>._))
+            .Invokes((DeleteObjectsRequest _, CancellationToken ct) => deleteCaptured = ct)
+            .Returns(new DeleteObjectsResponse { DeletedObjects = [] });
+
+        await S3Operations.EmptyBucketAsync(fake, "b", cts.Token);
+
+        listCaptured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task UploadFileAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonS3>();
+        A.CallTo(() => fake.PutObjectAsync(A<PutObjectRequest>._, A<CancellationToken>._))
+            .Invokes((PutObjectRequest _, CancellationToken ct) => captured = ct);
+
+        var tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        try
+        {
+            await File.WriteAllTextAsync(tempFile, "content");
+            await S3Operations.UploadFileAsync(fake, "b", "k", tempFile, cts.Token);
+            captured.ShouldBe(cts.Token);
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+                File.Delete(tempFile);
+        }
+    }
+
+    [Fact]
+    public async Task DownloadFileAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonS3>();
+        var content = "content";
+        A.CallTo(() => fake.GetObjectAsync(A<string>._, A<string>._, A<CancellationToken>._))
+            .Invokes((string _, string _, CancellationToken ct) => captured = ct)
+            .Returns(new GetObjectResponse
+            {
+                BucketName = "b",
+                Key = "k",
+                ResponseStream = new MemoryStream(Encoding.UTF8.GetBytes(content)),
+            });
+
+        var destFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString(), "out.txt");
+        try
+        {
+            var written = await S3Operations.DownloadFileAsync(fake, "b", "k", destFile, cts.Token);
+            written.ShouldBe(content.Length);
+            captured.ShouldBe(cts.Token);
+        }
+        finally
+        {
+            var dir = Path.GetDirectoryName(destFile);
+            if (dir is not null && Directory.Exists(dir))
+                Directory.Delete(dir, true);
+        }
+    }
 }

@@ -269,4 +269,94 @@ public class SqsOperationsTests
         );
         name.ShouldBe("c");
     }
+
+    // ---- Cancellation token forwarding ----
+
+    [Fact]
+    public async Task ListQueuesAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonSQS>();
+        A.CallTo(() => fake.ListQueuesAsync(A<ListQueuesRequest>._, A<CancellationToken>._))
+            .Invokes((ListQueuesRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new ListQueuesResponse { QueueUrls = [] });
+
+        await SqsOperations.ListQueuesAsync(fake, cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task CreateQueueAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonSQS>();
+        A.CallTo(() => fake.CreateQueueAsync(A<CreateQueueRequest>._, A<CancellationToken>._))
+            .Invokes((CreateQueueRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new CreateQueueResponse { QueueUrl = "http://localhost:4566/000000000000/q" });
+
+        await SqsOperations.CreateQueueAsync(fake, "q", cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task DeleteQueueAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonSQS>();
+        A.CallTo(() => fake.DeleteQueueAsync(A<DeleteQueueRequest>._, A<CancellationToken>._))
+            .Invokes((DeleteQueueRequest _, CancellationToken ct) => captured = ct);
+
+        await SqsOperations.DeleteQueueAsync(fake, "http://localhost:4566/000000000000/q", cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonSQS>();
+        A.CallTo(() => fake.SendMessageAsync(A<SendMessageRequest>._, A<CancellationToken>._))
+            .Invokes((SendMessageRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new SendMessageResponse { MessageId = "m1" });
+
+        await SqsOperations.SendMessageAsync(fake, "http://queue", "hello", cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task ReceiveMessagesAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonSQS>();
+        A.CallTo(() => fake.ReceiveMessageAsync(A<ReceiveMessageRequest>._, A<CancellationToken>._))
+            .Invokes((ReceiveMessageRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new ReceiveMessageResponse { Messages = [] });
+
+        await SqsOperations.ReceiveMessagesAsync(fake, "http://queue", ct: cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task DeleteMessageAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonSQS>();
+        A.CallTo(() => fake.DeleteMessageAsync(A<DeleteMessageRequest>._, A<CancellationToken>._))
+            .Invokes((DeleteMessageRequest _, CancellationToken ct) => captured = ct);
+
+        await SqsOperations.DeleteMessageAsync(fake, "http://queue", "rh", cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
 }
