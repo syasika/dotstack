@@ -228,6 +228,75 @@ public class ContainerCommandsTests
         result.ShouldBe(1);
         _console.Output.ShouldContain("Not initialized");
     }
+
+    // ---- Cancellation token forwarding ----
+
+    [Fact]
+    public void StatusCommand_forwards_cancellation_token_to_Docker()
+    {
+        using var scope = SetupConfig();
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _containers.InspectContainerAsync(A<string>._, A<CancellationToken>._))
+            .Invokes((string _, CancellationToken ct) => captured = ct)
+            .Returns(new ContainerInspectResponse
+            {
+                State = new ContainerState { Status = "running", StartedAt = "now" },
+            });
+
+        var cmd = new ContainerCommands.StatusCommand(_console, _dockerFactory);
+        cmd.Execute(new ConcreteCommandSettings(), cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public void StartCommand_forwards_cancellation_token_to_Docker()
+    {
+        using var scope = SetupConfig();
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _containers.StartContainerAsync(
+                A<string>._, A<ContainerStartParameters?>._, A<CancellationToken>._))
+            .Invokes((string _, ContainerStartParameters? _, CancellationToken ct) => captured = ct);
+
+        var cmd = new ContainerCommands.StartCommand(_console, _dockerFactory);
+        cmd.Execute(new ConcreteCommandSettings(), cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public void StopCommand_forwards_cancellation_token_to_Docker()
+    {
+        using var scope = SetupConfig();
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _containers.StopContainerAsync(
+                A<string>._, A<ContainerStopParameters?>._, A<CancellationToken>._))
+            .Invokes((string _, ContainerStopParameters? _, CancellationToken ct) => captured = ct);
+
+        var cmd = new ContainerCommands.StopCommand(_console, _dockerFactory);
+        cmd.Execute(new ConcreteCommandSettings(), cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public void RemoveCommand_forwards_cancellation_token_to_Docker()
+    {
+        using var scope = SetupConfig();
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _containers.RemoveContainerAsync(
+                A<string>._, A<ContainerRemoveParameters>._, A<CancellationToken>._))
+            .Invokes((string _, ContainerRemoveParameters _, CancellationToken ct) => captured = ct);
+
+        var cmd = new ContainerCommands.RemoveCommand(_console, _dockerFactory);
+        cmd.Execute(new ContainerCommands.RemoveSettings(), cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
 }
 
 /// <summary>

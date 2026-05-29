@@ -40,9 +40,22 @@ public static class CommandExtensions
         string commandName = "test")
         where TSettings : CommandSettings
     {
+        return cmd.Execute(settings, CancellationToken.None, commandName);
+    }
+
+    /// <summary>
+    /// Invoke a Spectre.Console.Cli command synchronously with a specific CancellationToken.
+    /// </summary>
+    public static int Execute<TSettings>(
+        this Command<TSettings> cmd,
+        TSettings settings,
+        CancellationToken cancellationToken,
+        string commandName = "test")
+        where TSettings : CommandSettings
+    {
         var ctx = TestHelpers.CreateContext(commandName);
         return ((ICommand<TSettings>)cmd)
-            .ExecuteAsync(ctx, settings, CancellationToken.None)
+            .ExecuteAsync(ctx, settings, cancellationToken)
             .GetAwaiter().GetResult();
     }
 }

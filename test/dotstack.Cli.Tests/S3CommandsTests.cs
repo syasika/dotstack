@@ -317,4 +317,114 @@ public class S3CommandsTests
         result.ShouldBe(1);
         _console.Output.ShouldContain("One argument must be an s3:// path");
     }
+
+    // ---- Cancellation token forwarding ----
+
+    [Fact]
+    public void LsCommand_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _s3.ListBucketsAsync(A<CancellationToken>._))
+            .Invokes((CancellationToken ct) => captured = ct)
+            .Returns(new ListBucketsResponse { Buckets = [] });
+
+        var cmd = new S3Commands.LsCommand(_console, _factory);
+        cmd.Execute(new S3Commands.LsSettings(), cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public void MbCommand_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _s3.PutBucketAsync(A<string>._, A<CancellationToken>._))
+            .Invokes((string _, CancellationToken ct) => captured = ct);
+
+        var cmd = new S3Commands.MbCommand(_console, _factory);
+        cmd.Execute(new S3Commands.BucketSettings { Bucket = "b" }, cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public void RbCommand_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _s3.DeleteBucketAsync(A<string>._, A<CancellationToken>._))
+            .Invokes((string _, CancellationToken ct) => captured = ct);
+
+        var cmd = new S3Commands.RbCommand(_console, _factory);
+        cmd.Execute(new S3Commands.BucketForceSettings { Bucket = "b" }, cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public void CpCommand_download_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var getResp = new GetObjectResponse
+        {
+            BucketName = "bucket",
+            Key = "remote/file.txt",
+            ResponseStream = new MemoryStream(Encoding.UTF8.GetBytes("content")),
+        };
+        A.CallTo(() => _s3.GetObjectAsync(A<string>._, A<string>._, A<CancellationToken>._))
+            .Invokes((string _, string _, CancellationToken ct) => captured = ct)
+            .Returns(getResp);
+
+        var destDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(destDir);
+        var destFile = Path.Combine(destDir, "output.txt");
+
+        try
+        {
+            var cmd = new S3Commands.CpCommand(_console, _factory);
+            cmd.Execute(new S3Commands.CpSettings
+            {
+                Source = "s3://bucket/remote/file.txt",
+                Destination = destFile,
+            }, cts.Token);
+
+            captured.ShouldBe(cts.Token);
+        }
+        finally
+        {
+            if (Directory.Exists(destDir))
+                Directory.Delete(destDir, true);
+        }
+    }
+
+    [Fact]
+    public void CpCommand_upload_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _s3.PutObjectAsync(A<PutObjectRequest>._, A<CancellationToken>._))
+            .Invokes((PutObjectRequest _, CancellationToken ct) => captured = ct);
+
+        var srcFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        try
+        {
+            File.WriteAllText(srcFile, "content");
+            var cmd = new S3Commands.CpCommand(_console, _factory);
+            cmd.Execute(new S3Commands.CpSettings
+            {
+                Source = srcFile,
+                Destination = "s3://bucket/key",
+            }, cts.Token);
+
+            captured.ShouldBe(cts.Token);
+        }
+        finally
+        {
+            if (File.Exists(srcFile))
+                File.Delete(srcFile);
+        }
+    }
 }

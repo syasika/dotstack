@@ -167,4 +167,87 @@ public class SqsCommandsTests
         result.ShouldBe(0);
         _console.Output.ShouldContain("No messages");
     }
+
+    // ---- Cancellation token forwarding ----
+
+    [Fact]
+    public void LsCommand_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _sqs.ListQueuesAsync(A<ListQueuesRequest>._, A<CancellationToken>._))
+            .Invokes((ListQueuesRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new ListQueuesResponse { QueueUrls = [] });
+
+        var cmd = new SqsCommands.LsCommand(_console, _factory);
+        cmd.Execute(new EndpointSettings(), cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public void CreateCommand_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _sqs.CreateQueueAsync(A<CreateQueueRequest>._, A<CancellationToken>._))
+            .Invokes((CreateQueueRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new CreateQueueResponse { QueueUrl = "http://localhost:4566/000000000000/q" });
+
+        var cmd = new SqsCommands.CreateCommand(_console, _factory);
+        cmd.Execute(new SqsCommands.NameSettings { Name = "q" }, cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public void RmCommand_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _sqs.DeleteQueueAsync(A<DeleteQueueRequest>._, A<CancellationToken>._))
+            .Invokes((DeleteQueueRequest _, CancellationToken ct) => captured = ct);
+
+        var cmd = new SqsCommands.RmCommand(_console, _factory);
+        cmd.Execute(new SqsCommands.UrlSettings { Url = "http://localhost:4566/000000000000/q" }, cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public void SendCommand_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _sqs.SendMessageAsync(A<SendMessageRequest>._, A<CancellationToken>._))
+            .Invokes((SendMessageRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new SendMessageResponse { MessageId = "m1" });
+
+        var cmd = new SqsCommands.SendCommand(_console, _factory);
+        cmd.Execute(new SqsCommands.SendSettings
+        {
+            Url = "http://localhost:4566/000000000000/q",
+            Message = "hello",
+        }, cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public void RecvCommand_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _sqs.ReceiveMessageAsync(A<ReceiveMessageRequest>._, A<CancellationToken>._))
+            .Invokes((ReceiveMessageRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new ReceiveMessageResponse { Messages = [] });
+
+        var cmd = new SqsCommands.RecvCommand(_console, _factory);
+        cmd.Execute(new SqsCommands.RecvSettings
+        {
+            Url = "http://localhost:4566/000000000000/q",
+        }, cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
 }

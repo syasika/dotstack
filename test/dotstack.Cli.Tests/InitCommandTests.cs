@@ -177,4 +177,42 @@ public class InitCommandTests
         _console.Output.ShouldContain("No running ministack container");
         _console.Output.ShouldContain("is running");
     }
+
+    // ---- Cancellation token forwarding ----
+
+    [Fact]
+    public void InitCommand_running_container_forwards_cancellation_token_to_Docker()
+    {
+        using var scope = SetupConfig();
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _containers.InspectContainerAsync(A<string>._, A<CancellationToken>._))
+            .Invokes((string _, CancellationToken ct) => captured = ct)
+            .Returns(new ContainerInspectResponse
+            {
+                State = new ContainerState { Status = "running" },
+            });
+
+        var cmd = new InitCommand(_console, _dockerFactory, _prompter, _initializer);
+        cmd.Execute(new InitCommand.Settings(), cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public void InitCommand_setup_forwards_cancellation_token_to_initializer()
+    {
+        using var scope = TempHomeScope().Scope;
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        Config expectedCfg = new Config("new-container", "ministackorg/ministack", "4566", "http://localhost:4566");
+        A.CallTo(() => _prompter.PromptSetup()).Returns(expectedCfg);
+        A.CallTo(() => _initializer.EnsureContainer(A<Config>._, A<CancellationToken>._))
+            .Invokes((Config _, CancellationToken ct) => captured = ct);
+
+        var cmd = new InitCommand(_console, _dockerFactory, _prompter, _initializer);
+        cmd.Execute(new InitCommand.Settings(), cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
 }

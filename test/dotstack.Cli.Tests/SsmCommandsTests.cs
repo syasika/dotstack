@@ -139,4 +139,67 @@ public class SsmCommandsTests
             .MustHaveHappenedOnceExactly();
         _console.Output.ShouldContain("deleted");
     }
+
+    // ---- Cancellation token forwarding ----
+
+    [Fact]
+    public void LsCommand_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _ssm.DescribeParametersAsync(A<DescribeParametersRequest>._, A<CancellationToken>._))
+            .Invokes((DescribeParametersRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new DescribeParametersResponse { Parameters = [] });
+
+        var cmd = new SsmCommands.LsCommand(_console, _factory);
+        cmd.Execute(new EndpointSettings(), cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public void GetCommand_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _ssm.GetParameterAsync(A<GetParameterRequest>._, A<CancellationToken>._))
+            .Invokes((GetParameterRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new GetParameterResponse
+            {
+                Parameter = new Amazon.SimpleSystemsManagement.Model.Parameter { Name = "/key", Value = "v" },
+            });
+
+        var cmd = new SsmCommands.GetCommand(_console, _factory);
+        cmd.Execute(new SsmCommands.NameSettings { Name = "/key" }, cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public void PutCommand_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _ssm.PutParameterAsync(A<PutParameterRequest>._, A<CancellationToken>._))
+            .Invokes((PutParameterRequest _, CancellationToken ct) => captured = ct);
+
+        var cmd = new SsmCommands.PutCommand(_console, _factory);
+        cmd.Execute(new SsmCommands.PutSettings { Name = "/key", Value = "v" }, cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public void RmCommand_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _ssm.DeleteParameterAsync(A<DeleteParameterRequest>._, A<CancellationToken>._))
+            .Invokes((DeleteParameterRequest _, CancellationToken ct) => captured = ct);
+
+        var cmd = new SsmCommands.RmCommand(_console, _factory);
+        cmd.Execute(new SsmCommands.NameSettings { Name = "/key" }, cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
 }

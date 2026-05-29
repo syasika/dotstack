@@ -68,6 +68,27 @@ Take CLI project from **0.1% → 90%+** line coverage via DI container refactor 
 | `dotstack.Cli.Tests.csproj` | Added `Spectre.Console.Cli` reference | Required for `Command<T>` base class resolution |
 | `Directory.Packages.props` | `Spectre.Console.Testing` 0.54.0 → 0.54.1-alpha.0.86 | Compatibility with `Spectre.Console` 0.55.x (`WriteAnsi` method) |
 
+### ✅ Phase 2 — Cancellation Token Forwarding (COMPLETE)
+
+**Added: 24 tests — all passing. Total: 98 tests.**
+
+Each command class now has at least one test proving the `CancellationToken`
+from `ExecuteAsync` is forwarded to the underlying SDK/Docker call.
+
+**Test files augmented:**
+
+| File | Tests added | What it covers |
+|------|-------------|----------------|
+| `S3CommandsTests.cs` | 5 | Ls, Mb, Rb, Cp (upload + download) forward token |
+| `SsmCommandsTests.cs` | 4 | Ls, Get, Put, Rm forward token |
+| `SqsCommandsTests.cs` | 5 | Ls, Create, Rm, Send, Recv forward token |
+| `SnsCommandsTests.cs` | 4 | Ls, Create, Rm, Publish forward token |
+| `ContainerCommandsTests.cs` | 4 | Status, Start, Stop, Remove forward token |
+| `InitCommandTests.cs` | 2 | Running-container path, no-config setup path forward token |
+
+**Infra changes:**
+- Added `CommandExtensions.Execute()` overload accepting `CancellationToken`
+
 #### Infra changes
 
 - Added `TestHelpers.cs` — `FakeRemainingArguments`, `TestHelpers.CreateContext()`, `CommandExtensions.Execute()` helper

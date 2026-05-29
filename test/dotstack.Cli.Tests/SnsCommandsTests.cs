@@ -124,4 +124,69 @@ public class SnsCommandsTests
         result.ShouldBe(0);
         _console.Output.ShouldContain("pub-456");
     }
+
+    // ---- Cancellation token forwarding ----
+
+    [Fact]
+    public void LsCommand_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _sns.ListTopicsAsync(A<ListTopicsRequest>._, A<CancellationToken>._))
+            .Invokes((ListTopicsRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new ListTopicsResponse { Topics = [] });
+
+        var cmd = new SnsCommands.LsCommand(_console, _factory);
+        cmd.Execute(new EndpointSettings(), cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public void CreateCommand_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _sns.CreateTopicAsync(A<CreateTopicRequest>._, A<CancellationToken>._))
+            .Invokes((CreateTopicRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new CreateTopicResponse { TopicArn = "arn:aws:sns:us-east-1:000000000000:t" });
+
+        var cmd = new SnsCommands.CreateCommand(_console, _factory);
+        cmd.Execute(new SnsCommands.NameSettings { Name = "t" }, cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public void RmCommand_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _sns.DeleteTopicAsync(A<DeleteTopicRequest>._, A<CancellationToken>._))
+            .Invokes((DeleteTopicRequest _, CancellationToken ct) => captured = ct);
+
+        var cmd = new SnsCommands.RmCommand(_console, _factory);
+        cmd.Execute(new SnsCommands.ArnSettings { TopicArn = "arn:aws:sns:us-east-1:000000000000:t" }, cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public void PublishCommand_forwards_cancellation_token_to_SDK()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        A.CallTo(() => _sns.PublishAsync(A<PublishRequest>._, A<CancellationToken>._))
+            .Invokes((PublishRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new PublishResponse { MessageId = "m1" });
+
+        var cmd = new SnsCommands.PublishCommand(_console, _factory);
+        cmd.Execute(new SnsCommands.PublishSettings
+        {
+            TopicArn = "arn:aws:sns:us-east-1:000000000000:t",
+            Message = "hello",
+        }, cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
 }
