@@ -182,4 +182,65 @@ public class SnsOperationsTests
         );
         name.ShouldBe("thing");
     }
+
+    // ---- Cancellation token forwarding ----
+
+    [Fact]
+    public async Task ListTopicsAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonSimpleNotificationService>();
+        A.CallTo(() => fake.ListTopicsAsync(A<ListTopicsRequest>._, A<CancellationToken>._))
+            .Invokes((ListTopicsRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new ListTopicsResponse { Topics = [] });
+
+        await SnsOperations.ListTopicsAsync(fake, cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task CreateTopicAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonSimpleNotificationService>();
+        A.CallTo(() => fake.CreateTopicAsync(A<CreateTopicRequest>._, A<CancellationToken>._))
+            .Invokes((CreateTopicRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new CreateTopicResponse { TopicArn = "arn:aws:sns:us-east-1:000000000000:t" });
+
+        await SnsOperations.CreateTopicAsync(fake, "t", cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task DeleteTopicAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonSimpleNotificationService>();
+        A.CallTo(() => fake.DeleteTopicAsync(A<DeleteTopicRequest>._, A<CancellationToken>._))
+            .Invokes((DeleteTopicRequest _, CancellationToken ct) => captured = ct);
+
+        await SnsOperations.DeleteTopicAsync(fake, "arn:aws:sns:us-east-1:000000000000:t", cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task PublishMessageAsync_forwards_cancellation_token()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken captured = default;
+        var fake = A.Fake<IAmazonSimpleNotificationService>();
+        A.CallTo(() => fake.PublishAsync(A<PublishRequest>._, A<CancellationToken>._))
+            .Invokes((PublishRequest _, CancellationToken ct) => captured = ct)
+            .Returns(new PublishResponse { MessageId = "m1" });
+
+        await SnsOperations.PublishMessageAsync(fake, "arn:aws:sns:us-east-1:000000000000:t", "msg", cts.Token);
+
+        captured.ShouldBe(cts.Token);
+    }
 }

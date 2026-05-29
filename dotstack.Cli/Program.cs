@@ -1,10 +1,20 @@
+using DotStack.Cli.Abstractions;
 using DotStack.Cli.Commands;
+using DotStack.Cli.Infrastructure;
 using DotStack.Cli.Telemetry;
 using DotStack.Core.Telemetry;
+using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Spectre.Console;
 using Spectre.Console.Cli;
+
+var services = new ServiceCollection();
+services.AddSingleton<IAnsiConsole>(_ => AnsiConsole.Console);
+services.AddSingleton<IAwsClientFactory, AwsClientFactoryWrapper>();
+services.AddSingleton<IDockerClientFactory, DockerClientFactory>();
+var registrar = new TypeRegistrar(services);
 
 var otelEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
 
@@ -24,7 +34,7 @@ if (!string.IsNullOrEmpty(otelEndpoint))
 
 using var tracerProvider = tracerProviderBuilder.Build();
 
-var app = new CommandApp();
+var app = new CommandApp(registrar);
 
 app.Configure(config =>
 {

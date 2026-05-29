@@ -1,3 +1,5 @@
+using DotStack.Cli.Abstractions;
+using DotStack.Core;
 using DotStack.Core.Aws;
 using DotStack.Core.Sqs;
 using Spectre.Console;
@@ -39,104 +41,154 @@ public static class SqsCommands
 
     public class LsCommand : Command<EndpointSettings>
     {
+        private readonly IAnsiConsole _console;
+        private readonly IAwsClientFactory _clientFactory;
+
+        public LsCommand(IAnsiConsole console, IAwsClientFactory clientFactory)
+        {
+            _console = console;
+            _clientFactory = clientFactory;
+        }
+
         protected override int Execute(
             CommandContext context,
             EndpointSettings settings,
             CancellationToken cancellationToken
         )
         {
-            var client = AwsClientFactory.CreateSqsClient(settings.EndpointUrl);
+            VerboseConfig.Enabled = settings.Verbose;
+            var client = _clientFactory.CreateSqsClient(settings.EndpointUrl);
             var queues = SqsOperations
                 .ListQueuesAsync(client, cancellationToken)
                 .GetAwaiter()
                 .GetResult();
             if (queues.Count == 0)
             {
-                AnsiConsole.MarkupLine("[grey italic]No queues.[/]");
+                _console.MarkupLine("[grey italic]No queues.[/]");
                 return 0;
             }
-            AnsiConsole.MarkupLine($"[bold white on #0066CC] Queues ({queues.Count}) [/]");
+            _console.MarkupLine($"[bold white on #0066CC] Queues ({queues.Count}) [/]");
             foreach (var q in queues)
-                AnsiConsole.MarkupLine($"  📦 [bold #0044CC]{q.Name}[/]");
+                _console.MarkupLine($"  📦 [bold #0044CC]{q.Name}[/]");
             return 0;
         }
     }
 
     public class CreateCommand : Command<NameSettings>
     {
+        private readonly IAnsiConsole _console;
+        private readonly IAwsClientFactory _clientFactory;
+
+        public CreateCommand(IAnsiConsole console, IAwsClientFactory clientFactory)
+        {
+            _console = console;
+            _clientFactory = clientFactory;
+        }
+
         protected override int Execute(
             CommandContext context,
             NameSettings settings,
             CancellationToken cancellationToken
         )
         {
-            var client = AwsClientFactory.CreateSqsClient(settings.EndpointUrl);
+            VerboseConfig.Enabled = settings.Verbose;
+            var client = _clientFactory.CreateSqsClient(settings.EndpointUrl);
             var q = SqsOperations
                 .CreateQueueAsync(client, settings.Name, cancellationToken)
                 .GetAwaiter()
                 .GetResult();
-            AnsiConsole.MarkupLine($"[green bold]✓[/] Queue '[bold]{q.Name}[/]' created");
+            _console.MarkupLine($"[green bold]✓[/] Queue '[bold]{q.Name}[/]' created");
             return 0;
         }
     }
 
     public class RmCommand : Command<UrlSettings>
     {
+        private readonly IAnsiConsole _console;
+        private readonly IAwsClientFactory _clientFactory;
+
+        public RmCommand(IAnsiConsole console, IAwsClientFactory clientFactory)
+        {
+            _console = console;
+            _clientFactory = clientFactory;
+        }
+
         protected override int Execute(
             CommandContext context,
             UrlSettings settings,
             CancellationToken cancellationToken
         )
         {
-            var client = AwsClientFactory.CreateSqsClient(settings.EndpointUrl);
+            VerboseConfig.Enabled = settings.Verbose;
+            var client = _clientFactory.CreateSqsClient(settings.EndpointUrl);
             SqsOperations
                 .DeleteQueueAsync(client, settings.Url, cancellationToken)
                 .GetAwaiter()
                 .GetResult();
-            AnsiConsole.MarkupLine($"[green bold]✓[/] Queue deleted");
+            _console.MarkupLine($"[green bold]✓[/] Queue deleted");
             return 0;
         }
     }
 
     public class SendCommand : Command<SendSettings>
     {
+        private readonly IAnsiConsole _console;
+        private readonly IAwsClientFactory _clientFactory;
+
+        public SendCommand(IAnsiConsole console, IAwsClientFactory clientFactory)
+        {
+            _console = console;
+            _clientFactory = clientFactory;
+        }
+
         protected override int Execute(
             CommandContext context,
             SendSettings settings,
             CancellationToken cancellationToken
         )
         {
-            var client = AwsClientFactory.CreateSqsClient(settings.EndpointUrl);
+            VerboseConfig.Enabled = settings.Verbose;
+            var client = _clientFactory.CreateSqsClient(settings.EndpointUrl);
             var msgId = SqsOperations
                 .SendMessageAsync(client, settings.Url, settings.Message, cancellationToken)
                 .GetAwaiter()
                 .GetResult();
-            AnsiConsole.MarkupLine($"[green bold]✓[/] Message sent (id: {msgId})");
+            _console.MarkupLine($"[green bold]✓[/] Message sent (id: {msgId})");
             return 0;
         }
     }
 
     public class RecvCommand : Command<RecvSettings>
     {
+        private readonly IAnsiConsole _console;
+        private readonly IAwsClientFactory _clientFactory;
+
+        public RecvCommand(IAnsiConsole console, IAwsClientFactory clientFactory)
+        {
+            _console = console;
+            _clientFactory = clientFactory;
+        }
+
         protected override int Execute(
             CommandContext context,
             RecvSettings settings,
             CancellationToken cancellationToken
         )
         {
-            var client = AwsClientFactory.CreateSqsClient(settings.EndpointUrl);
+            VerboseConfig.Enabled = settings.Verbose;
+            var client = _clientFactory.CreateSqsClient(settings.EndpointUrl);
             var messages = SqsOperations
                 .ReceiveMessagesAsync(client, settings.Url, settings.Max, cancellationToken)
                 .GetAwaiter()
                 .GetResult();
             if (messages.Count == 0)
             {
-                AnsiConsole.MarkupLine("[grey italic]No messages.[/]");
+                _console.MarkupLine("[grey italic]No messages.[/]");
                 return 0;
             }
-            AnsiConsole.MarkupLine($"[bold white on #0066CC] Messages ({messages.Count}) [/]");
+            _console.MarkupLine($"[bold white on #0066CC] Messages ({messages.Count}) [/]");
             foreach (var m in messages)
-                AnsiConsole.MarkupLine($"  [grey][{m.Id}][/] {m.Body}");
+                _console.MarkupLine($"  [grey]{m.Id.EscapeMarkup()}[/]  {m.Body.EscapeMarkup()}");
             return 0;
         }
     }

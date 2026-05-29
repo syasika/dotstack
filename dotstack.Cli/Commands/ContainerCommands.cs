@@ -1,6 +1,9 @@
 using Docker.DotNet;
+using Docker.DotNet.Models;
+using DotStack.Cli.Abstractions;
 using DotStack.Core.Configuration;
 using Spectre.Console;
+using Config = DotStack.Core.Configuration.Config;
 using Spectre.Console.Cli;
 
 namespace DotStack.Cli.Commands;
@@ -15,6 +18,15 @@ public static class ContainerCommands
 
     public class StatusCommand : Command<CommandSettings>
     {
+        private readonly IAnsiConsole _console;
+        private readonly IDockerClientFactory _dockerFactory;
+
+        public StatusCommand(IAnsiConsole console, IDockerClientFactory dockerFactory)
+        {
+            _console = console;
+            _dockerFactory = dockerFactory;
+        }
+
         protected override int Execute(
             CommandContext context,
             CommandSettings settings,
@@ -24,11 +36,11 @@ public static class ContainerCommands
             var cfg = Config.Load();
             if (cfg is null)
             {
-                AnsiConsole.MarkupLine("[yellow]Not initialized. Run 'dotstack init' first.[/]");
+                _console.MarkupLine("[yellow]Not initialized. Run 'dotstack init' first.[/]");
                 return 0;
             }
 
-            using var docker = new DockerClientConfiguration().CreateClient();
+            using var docker = _dockerFactory.CreateClient();
             try
             {
                 var ci = docker
@@ -37,15 +49,15 @@ public static class ContainerCommands
                     .GetResult();
                 var color = ci.State.Status == "running" ? "green" : "yellow";
                 var symbol = ci.State.Status == "running" ? "● running" : $"● {ci.State.Status}";
-                AnsiConsole.MarkupLine($"[bold]Container:[/]  {cfg.ContainerName}");
-                AnsiConsole.MarkupLine($"[bold]Image:[/]     {cfg.ImageName}");
-                AnsiConsole.MarkupLine($"[bold]Status:[/]    [{color} bold]{symbol}[/]");
+                _console.MarkupLine($"[bold]Container:[/]  {cfg.ContainerName}");
+                _console.MarkupLine($"[bold]Image:[/]     {cfg.ImageName}");
+                _console.MarkupLine($"[bold]Status:[/]    [{color} bold]{symbol}[/]");
                 if (ci.State.Status == "running")
-                    AnsiConsole.MarkupLine($"[bold]Started:[/]   {ci.State.StartedAt}");
+                    _console.MarkupLine($"[bold]Started:[/]   {ci.State.StartedAt}");
             }
             catch (DockerContainerNotFoundException)
             {
-                AnsiConsole.MarkupLine($"[yellow]Container '{cfg.ContainerName}' not found[/]");
+                _console.MarkupLine($"[yellow]Container '{cfg.ContainerName}' not found[/]");
             }
             return 0;
         }
@@ -53,6 +65,15 @@ public static class ContainerCommands
 
     public class StartCommand : Command<CommandSettings>
     {
+        private readonly IAnsiConsole _console;
+        private readonly IDockerClientFactory _dockerFactory;
+
+        public StartCommand(IAnsiConsole console, IDockerClientFactory dockerFactory)
+        {
+            _console = console;
+            _dockerFactory = dockerFactory;
+        }
+
         protected override int Execute(
             CommandContext context,
             CommandSettings settings,
@@ -62,15 +83,15 @@ public static class ContainerCommands
             var cfg = Config.Load();
             if (cfg is null)
             {
-                AnsiConsole.MarkupLine("[red]Not initialized. Run 'dotstack init' first.[/]");
+                _console.MarkupLine("[red]Not initialized. Run 'dotstack init' first.[/]");
                 return 1;
             }
-            using var docker = new DockerClientConfiguration().CreateClient();
+            using var docker = _dockerFactory.CreateClient();
             docker
                 .Containers.StartContainerAsync(cfg.ContainerName, null, cancellationToken)
                 .GetAwaiter()
                 .GetResult();
-            AnsiConsole.MarkupLine(
+            _console.MarkupLine(
                 $"[green bold]✓[/] Container '[bold]{cfg.ContainerName}[/]' started"
             );
             return 0;
@@ -79,6 +100,15 @@ public static class ContainerCommands
 
     public class StopCommand : Command<CommandSettings>
     {
+        private readonly IAnsiConsole _console;
+        private readonly IDockerClientFactory _dockerFactory;
+
+        public StopCommand(IAnsiConsole console, IDockerClientFactory dockerFactory)
+        {
+            _console = console;
+            _dockerFactory = dockerFactory;
+        }
+
         protected override int Execute(
             CommandContext context,
             CommandSettings settings,
@@ -88,15 +118,15 @@ public static class ContainerCommands
             var cfg = Config.Load();
             if (cfg is null)
             {
-                AnsiConsole.MarkupLine("[red]Not initialized. Run 'dotstack init' first.[/]");
+                _console.MarkupLine("[red]Not initialized. Run 'dotstack init' first.[/]");
                 return 1;
             }
-            using var docker = new DockerClientConfiguration().CreateClient();
+            using var docker = _dockerFactory.CreateClient();
             docker
                 .Containers.StopContainerAsync(cfg.ContainerName, null, cancellationToken)
                 .GetAwaiter()
                 .GetResult();
-            AnsiConsole.MarkupLine(
+            _console.MarkupLine(
                 $"[green bold]✓[/] Container '[bold]{cfg.ContainerName}[/]' stopped"
             );
             return 0;
@@ -105,6 +135,15 @@ public static class ContainerCommands
 
     public class RemoveCommand : Command<RemoveSettings>
     {
+        private readonly IAnsiConsole _console;
+        private readonly IDockerClientFactory _dockerFactory;
+
+        public RemoveCommand(IAnsiConsole console, IDockerClientFactory dockerFactory)
+        {
+            _console = console;
+            _dockerFactory = dockerFactory;
+        }
+
         protected override int Execute(
             CommandContext context,
             RemoveSettings settings,
@@ -114,20 +153,20 @@ public static class ContainerCommands
             var cfg = Config.Load();
             if (cfg is null)
             {
-                AnsiConsole.MarkupLine("[red]Not initialized. Run 'dotstack init' first.[/]");
+                _console.MarkupLine("[red]Not initialized. Run 'dotstack init' first.[/]");
                 return 1;
             }
-            using var docker = new DockerClientConfiguration().CreateClient();
+            using var docker = _dockerFactory.CreateClient();
             docker
                 .Containers.RemoveContainerAsync(
                     cfg.ContainerName,
-                    new Docker.DotNet.Models.ContainerRemoveParameters { Force = settings.Force },
+                    new ContainerRemoveParameters { Force = settings.Force },
                     cancellationToken
                 )
                 .GetAwaiter()
                 .GetResult();
             Config.Remove();
-            AnsiConsole.MarkupLine(
+            _console.MarkupLine(
                 $"[green bold]✓[/] Container '[bold]{cfg.ContainerName}[/]' removed"
             );
             return 0;
